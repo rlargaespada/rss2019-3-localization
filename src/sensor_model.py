@@ -1,6 +1,6 @@
 import numpy as np
 from scan_simulator_2d import PyScanSimulator2D
-
+import sensor_lookup
 import rospy
 import tf
 from nav_msgs.msg import OccupancyGrid
@@ -16,7 +16,7 @@ class SensorModel:
         self.num_beams_per_particle = rospy.get_param("~num_beams_per_particle")
         self.scan_theta_discretization = rospy.get_param("~scan_theta_discretization")
         self.scan_field_of_view = rospy.get_param("~scan_field_of_view")
-
+        self.grain = .01
         ####################################
         # TODO
         # Precompute the sensor model here
@@ -72,9 +72,9 @@ class SensorModel:
         # You will probably want to use this function
         # to perform ray tracing from all the particles.
         # This produces a matrix of size N x num_beams_per_particle 
-
         scans = self.scan_sim.scan(particles)
-
+        prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, .5, 10, self.grain)
+        return scans_to_probs(scans, observations, prob_lookup, grain)
         ####################################
 
     def map_callback(self, map_msg):
@@ -105,3 +105,14 @@ class SensorModel:
         self.map_set = True
 
         print("Map initialized")
+
+    def scans_to_probs(scans, observations, prob_lookup, grain):
+        probs = np.zeros(scans.shape[0], self.num_beams_per_particle)
+        for beam in xrange(self.num_beams_per_particle):
+            measurement = int(observations[beam]/grain)
+            for particle in xrange(scan.shape[0]):
+                probs[particle, ray] = prob_lookup[measurement, scans[particle, ray]]
+
+        probs_mean = np.mean(probs, axis=1)
+        probs_sum = np.sum(probs_mean)
+        return probs_mean/probs_sum
