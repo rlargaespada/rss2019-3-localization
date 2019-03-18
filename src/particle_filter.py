@@ -18,10 +18,12 @@ class ParticleFilter:
             self.ODOMETRY_TOPIC = "/odom"
             self.SCAN_TOPIC = "/scan"
             self.POSE_TOPIC = "/initialpose"
+            self.AVG_POSE_TOPIC = "/base_link_pf"
         else:
             self.ODOMETRY_TOPIC = "vesc/odom"
-            self.SCAN_TOPIC = "will fix later"
+            self.SCAN_TOPIC = "/scan"
             self.POSE_TOPIC = "will fix later"
+            self.AVG_POSE_TOPIC = "/base_link"
         #Set size of partcles: First number is #particles
         self.particles = np.zeros((3, 3))
         self.std_dev = 1 #standard deviation of simulated sensor noise
@@ -53,6 +55,7 @@ class ParticleFilter:
         vel[1] = odometry.twist.twist.linear.y
         vel[2] = odometry.twist.twist.angular.z
         self.particles = self.motion_model.evaluate(self.particles, vel)
+        self.get_avg_pose()
 
     def scan_callback(self, scan):
         '''
@@ -63,6 +66,7 @@ class ParticleFilter:
         probs_for_particles = self.sensor_model.evaluate(self.particles, scan)
         new_particles = np.random.choice(self.particles, probs_for_particles)
         self.particles = new_particles
+        self.get_avg_pose()
 
     def particle_setup(self, position):
         '''
@@ -73,12 +77,20 @@ class ParticleFilter:
         theta = 2*np.arctan(position.pose.pose.orientation.z/position.pose.pose.orientation.w)
         #Note on theta: This is calculated so 0 rad is pointing down on the map (along
         #grid marks).  Counterclockwise in + angle to pi and clockwise is - angle to pi
-        N = len(particles)
+        N = len(self.particles)
         self.particles[:, 0] = x + np.random.randn(N)*self.std_dev
         self.particles[:, 1] = y + np.random.randn(N)*self.std_dev
         self.particles[:, 2] = theta + np.random.randn(N)*self.std_dev
-        particles[:, 2] %= 2* np.pi
+        self.particles[:, 2] %= 2* np.pi
 
+    def get_avg_pose(self):
+        '''
+        Gets the average pose from all the particles, saves to self and publishes.
+        '''
+        x_avg = np.average(self.particles[:,0])
+        y_avg = np.average(self.particles[:,1])
+        theta_avg = np.average(self.particles[:,2]) #fix
+        #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
