@@ -16,7 +16,10 @@ class SensorModel:
         self.num_beams_per_particle = rospy.get_param("~num_beams_per_particle")
         self.scan_theta_discretization = rospy.get_param("~scan_theta_discretization")
         self.scan_field_of_view = rospy.get_param("~scan_field_of_view")
+        #meters/measurement in lookup table 
         self.grain = .01
+        #Get lookup table: Values listed as (a_hit, a_short, a_max, a_rand, sigma, max_range, dz)
+        self.prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, .5, 10, self.grain)
         ####################################
         # TODO
         # Precompute the sensor model here
@@ -51,7 +54,7 @@ class SensorModel:
             
                 [x0 y0 theta0]
                 [x1 y0 theta1]
-                [    ...     ]
+                [    ...     ] 
 
             observation: A vector of lidar data of
                 length N
@@ -73,8 +76,8 @@ class SensorModel:
         # to perform ray tracing from all the particles.
         # This produces a matrix of size N x num_beams_per_particle 
         scans = self.scan_sim.scan(particles)
-        prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, .5, 10, self.grain)
-        return scans_to_probs(scans, observations, prob_lookup, grain)
+        #Return probabilities
+        return scans_to_probs(self, scans, observations, self.grain)
         ####################################
 
     def map_callback(self, map_msg):
@@ -106,13 +109,27 @@ class SensorModel:
 
         print("Map initialized")
 
-    def scans_to_probs(scans, observations, prob_lookup, grain):
-        probs = np.zeros(scans.shape[0], self.num_beams_per_particle)
+    def scans_to_probs(self, scans, observations, grain):
+        '''
+        take in scans, observations, and grain
+        '''
+        #Initialize a matrix of probabilities associated with each ray
+        probs = np.zeros((scans.shape[0], self.num_beams_per_particle))
+        #Iterate through each beam on a scan
         for beam in xrange(self.num_beams_per_particle):
+            #set the ground based measurement for each beam
             measurement = int(observations[beam]/grain)
+            #Iterate through each particle
             for particle in xrange(scan.shape[0]):
-                probs[particle, ray] = prob_lookup[measurement, scans[particle, ray]]
+                #Get the corrosponding measurement/scan probability from lookup table
+                probs[particle, ray] = self.prob_lookup[measurement, scans[particle, ray]]
 
+        #Find the overall probability of each scan by averaging each ray probability
         probs_mean = np.mean(probs, axis=1)
+        #Get normalization constant for distribution of probabilities across particles
         probs_sum = np.sum(probs_mean)
         return probs_mean/probs_sum
+
+
+
+
