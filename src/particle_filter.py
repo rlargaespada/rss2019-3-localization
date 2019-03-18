@@ -24,6 +24,7 @@ class ParticleFilter:
             self.POSE_TOPIC = "will fix later"
         #Set size of partcles: First number is #particles
         self.particles = np.zeros((3, 3))
+        self.std_dev = 1 #standard deviation of simulated sensor noise
         # Initialize the models
         self.motion_model = MotionModel()
         self.sensor_model = SensorModel()
@@ -68,11 +69,15 @@ class ParticleFilter:
         Take in position sent by "2D Pose Estimation"
         Set all particles to that pose.
         '''
-        x, y = position.pose.pose.point.x, position.pose.pose.point.y
+        x, y = position.pose.pose.position.x, position.pose.pose.position.y
         theta = 2*np.arctan(position.pose.pose.orientation.z/position.pose.pose.orientation.w)
         #Note on theta: This is calculated so 0 rad is pointing down on the map (along
         #grid marks).  Counterclockwise in + angle to pi and clockwise is - angle to pi
-        self.particles[:] = np.array([x, y, theta])
+        N = len(particles)
+        self.particles[:, 0] = x + np.random.randn(N)*self.std_dev
+        self.particles[:, 1] = y + np.random.randn(N)*self.std_dev
+        self.particles[:, 2] = theta + np.random.randn(N)*self.std_dev
+        particles[:, 2] %= 2* np.pi
 
 
 if __name__ == "__main__":
