@@ -1,42 +1,15 @@
+"""
+    RSS 2019 | sensor_lookup.py
+    Creates a lookup table for laser reading probabilities for a map of defined
+    size.
+
+    Authors: Abbie Lee (abbielee@mit.edu) and Alex Cuellar (acuel@mit.edu)
+
+"""
 import numpy as np
-
-class SensorModel:
-
-    def __init__(self, a_hit, a_short, a_max, a_rand, sigma, z_max, z_crit):
-        self.a_hit = a_hit
-        self.a_short = a_short
-        self.a_max = a_max
-        self.a_rand = a_rand
-        self.z_max = z_max # maximum range of the scan
-        self.z_crit = z_crit # ground truth from ray casting on map / mean of hit distribution
-        self.sigma = sigma # std of hit distribution
-        self.nu = 1
-
-    def p_hit(self, zt):
-        if 0 <= zt <= self.z_max:
-            return self.nu * (np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(zt-self.z_crit)**2/(2*self.sigma**2))
-
-    def p_short(self, zt):
-        if 0 <= zt <= self.z_crit:
-            return (2/self.z_crit) * (1 - zt/self.z_crit)
-        else:
-            return 0
-
-    def p_max(self, zt):
-        if zt == self.z_max:
-            return 1
-        else:
-            return 0
-
-    def p_rand(self, zt):
-        if 0 <= zt <= self.z_max:
-            return 1/self.z_max
-        else:
-            return 0
-
-    def measurement_prob(self, zt):
-        return self.a_hit * self.p_hit(zt) + self.a_short * self.p_short(zt) + self.a_max * self.p_max(zt) + self.a_rand * self.p_rand(zt)
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 class SensorTable:
 
@@ -48,42 +21,75 @@ class SensorTable:
         self.z_max = max_range
         self.sigma = sigma # std of hit distribution
         self.dz = dz # granularity of lookup table
-        self.nu = 1
+        self.num_points = int(self.z_max/self.dz)
 
-        self.probs = np.zeros((int(max_range/dz), int(max_range/dz))) # index with [z_map, z_t]
+        self.probs = np.zeros((self.num_points, self.num_points)) # index with [z_map, z_t]
         self.make_table()
 
     def p_hit(self):
+        # counter = 0
+        # for z_map in np.linspace(0, self.z_max, int(self.z_max/self.dz)):
+        #     zt = np.linspace(0, self.z_max, int(self.z_max/self.dz))
+        #     new_row = self.a_hit *(np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(zt-z_map)**2/(2*self.sigma**2))
+        #     self.probs[counter,:] += new_row
+        #     counter += 1
         for z_map in xrange(0, int(self.z_max/self.dz)):
             for zt in xrange(0, int(self.z_max/self.dz)):
-                self.probs[z_map, zt] += self.a_hit * self.nu *(np.sqrt(2*np.pi*self.sigma**2))**-1 *np.exp(-(zt*self.dz-z_map*self.dz)**2/(2*self.sigma**2))
+                self.probs[z_map, zt] += self.a_hit *(np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(self.dz*(zt-z_map))**2/(2*self.sigma**2))
+        # self.normalize()
 
     def p_short(self):
         for z_map in xrange(1, int(self.z_max/self.dz)):
             for zt in xrange(0, int(self.z_max/self.dz)):
                 if zt <= z_map:
-                    # print("here")
                     self.probs[z_map, zt] += self.a_short * (2./(z_map*self.dz)) * (1 - zt*1./z_map)
-                    # print(self.a_short * (2./(z_map*self.dz)) * (1 - zt*1./z_map))
                 else:
                     break
 
     def p_max(self):
         self.probs[:,-1] += self.a_max * 1
 
-
     def p_rand(self):
         self.probs += self.a_rand/self.z_max
 
+    def normalize(self):
+        col_total = np.sum(self.probs, axis = 0)
+        self.probs = self.probs / col_total
+
     def make_table(self):
         self.p_hit()
-        # print(self.probs[0,700])
+        # print(self.probs[700,0])
         self.p_short()
-        # print(self.probs[0, 700])
+        # print(self.probs[700, 0])
         self.p_max()
-        # print(self.probs[0, 700])
+        # print(self.probs[700, 0])
         self.p_rand()
-        # print(self.probs[0, 700])
+        # print(self.probs[700, 0])
 
-table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
-print(table.probs[700, 800])
+    def plot3d(self):
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+
+        # Make data
+        x = np.linspace(0, self.z_max, int(self.z_max/self.dz))
+        y = np.linspace(0, self.z_max, int(self.z_max/self.dz))
+        x, y = np.meshgrid(x, y)
+        z = self.probs
+
+        surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+
+        ax.set_xlabel("Measured")
+        ax.set_ylabel("Ground Truth")
+        ax.set_zlabel("Probability")
+        ax.set_zlim(0, 0.8)
+
+        plt.show()
+
+    def plot2d(self):
+        plt.plot(self.probs[700,:])
+        plt.show()
+
+# table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
+# # print(table.probs[700, 800])
+# print(table.probs[700, 700])
+# table.plot3d()
