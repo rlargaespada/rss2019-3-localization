@@ -1,15 +1,11 @@
+import numpy as np
+
 class MotionModel:
 
     def __init__(self):
 
-        ####################################
-        # TODO
-        # Do any precomputation for the motion
-        # model here.
-
-        pass
-
-        ####################################
+        self.std_dev = 1 #standard deviation of simulated sensor noise
+        self.delta_t = 0.05 #20Hz
 
     def evaluate(self, particles, odometry):
         """
@@ -31,8 +27,16 @@ class MotionModel:
         """
         
         ####################################
-        # TODO
+        N = len(particles)
+        #change heading
+        particles[:, 2] += odometry[2]*self.delta_t + np.random.randn(N)*self.std_dev
+        particles[:, 2] %= 2* np.pi
 
-        pass
+        #predict x and y positions
+        particles[:, 0] += odometry[0]*self.delta_t + np.random.randn(N)*self.std_dev
+        particles[:, 1] += odometry[1]*self.delta_t + np.random.randn(N)*self.std_dev
+
+        return particles
+        
 
         ####################################
