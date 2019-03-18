@@ -13,9 +13,15 @@ class ParticleFilter:
         # Get parameters
         self.particle_filter_frame = \
                 rospy.get_param("~particle_filter_frame")
-        self.ODOMETRY_TOPIC = "/odom"
-        self.SCAN_TOPIC = "/scan"
-        self.POSE_TOPIC = "/initialpose"
+        self.sim = True
+        if self.sim: 
+            self.ODOMETRY_TOPIC = "/odom"
+            self.SCAN_TOPIC = "/scan"
+            self.POSE_TOPIC = "/initialpose"
+        else:
+            self.ODOMETRY_TOPIC = "vesc/odom"
+            self.SCAN_TOPIC = "will fix later"
+            self.POSE_TOPIC = "will fix later"
         #Set size of partcles: First number is #particles
         self.particles = np.zeros((3, 3))
         # Initialize the models
@@ -40,7 +46,12 @@ class ParticleFilter:
         Take in odometry data.  
         Add noise via motion_model.
         '''
-        pass
+        #[dx, dy, dtheta]
+        vel = np.zeros(3, 1)
+        vel[0] = odometry.twist.twist.linear.x
+        vel[1] = odometry.twist.twist.linear.y
+        vel[2] = odometry.twist.twist.angular.z
+        self.particles = self.motion_model.evaluate(self.particles, vel)
 
     def scan_callback(self, scan):
         '''
