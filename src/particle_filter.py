@@ -57,7 +57,7 @@ class ParticleFilter:
         Take in position sent by "2D Pose Estimation"
         Set all particles to that pose.
         '''
-        x, y = position.pose.pose.point.x, position.pose.pose.point.x
+        x, y = position.pose.pose.point.x, position.pose.pose.point.y
         theta = 2*np.atan(position.pose.pose.orientation.z/position.pose.pose.orientation.w)
         #Note on theta: This is calculated so 0 rad is pointing down on the map (along
         #grid marks).  Counterclockwise in + angle to pi and clockwise is - angle to pi
