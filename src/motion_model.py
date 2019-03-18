@@ -4,7 +4,7 @@ class MotionModel:
 
     def __init__(self):
 
-        self.std_dev = 1
+        self.std_dev = 1 #standard deviation of simulated sensor noise
         self.delta_t = 0.05 #20Hz
 
     def evaluate(self, particles, odometry):
