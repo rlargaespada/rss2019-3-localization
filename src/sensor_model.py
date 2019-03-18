@@ -44,7 +44,7 @@ class SensorModel:
                 self.map_callback,
                 queue_size=1)
 
-    def evaluate(self, particles, observation):
+    def evaluate(self, particles, observations):
         """
         Evaluate how likely each particle is given
         the observed scan.
@@ -77,7 +77,7 @@ class SensorModel:
         # This produces a matrix of size N x num_beams_per_particle 
         scans = self.scan_sim.scan(particles)
         #Return probabilities
-        return scans_to_probs(self, scans, observations, self.grain)
+        return self.scans_to_probs(scans, observations, self.grain)
         ####################################
 
     def map_callback(self, map_msg):
@@ -120,9 +120,9 @@ class SensorModel:
             #set the ground based measurement for each beam
             measurement = int(observations[beam]/grain)
             #Iterate through each particle
-            for particle in xrange(scan.shape[0]):
+            for particle in xrange(scans.shape[0]):
                 #Get the corrosponding measurement/scan probability from lookup table
-                probs[particle, ray] = self.prob_lookup[measurement, scans[particle, ray]]
+                probs[particle, beam] = self.prob_lookup.probs[measurement, scans[particle, beam]]
 
         #Find the overall probability of each scan by averaging each ray probability
         probs_mean = np.mean(probs, axis=1)

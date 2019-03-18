@@ -1,10 +1,10 @@
 #!/usr/bin/env python2
-
+import numpy as np
 import rospy
 from sensor_model import SensorModel
 from motion_model import MotionModel
 from geometry_msgs.msgs import PoseWithCovarianceStamped
-from nav_msgs.msgs import Odometry
+from nav_msgs.msgs import Odometry, LaserScan 
 
 class ParticleFilter:
 
@@ -59,7 +59,7 @@ class ParticleFilter:
         Pass most recent partcles into sensor_model.
         Sample these particles given the last distribution.
         '''
-        probs_for_particles = SensorModel.evaluate(self.particles, scan)
+        probs_for_particles = self.sensor_model.evaluate(self.particles, scan)
         new_particles = np.random.choice(self.particles, probs_for_particles)
         self.particles = new_particles
 
@@ -69,10 +69,10 @@ class ParticleFilter:
         Set all particles to that pose.
         '''
         x, y = position.pose.pose.point.x, position.pose.pose.point.y
-        theta = 2*np.atan(position.pose.pose.orientation.z/position.pose.pose.orientation.w)
+        theta = 2*np.arctan(position.pose.pose.orientation.z/position.pose.pose.orientation.w)
         #Note on theta: This is calculated so 0 rad is pointing down on the map (along
         #grid marks).  Counterclockwise in + angle to pi and clockwise is - angle to pi
-        self.particles[:] = np.array([x, y theta])
+        self.particles[:] = np.array([x, y, theta])
 
 
 if __name__ == "__main__":
