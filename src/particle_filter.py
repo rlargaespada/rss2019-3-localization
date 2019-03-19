@@ -3,8 +3,9 @@ import numpy as np
 import rospy
 from sensor_model import SensorModel
 from motion_model import MotionModel
-from geometry_msgs.msgs import PoseWithCovarianceStamped
-from nav_msgs.msgs import Odometry, LaserScan 
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from nav_msgs.msg import odometry
+from sensor_msgs.msg import LaserScan
 
 class ParticleFilter:
 
@@ -30,6 +31,7 @@ class ParticleFilter:
         # Initialize the models
         self.motion_model = MotionModel()
         self.sensor_model = SensorModel()
+        self.current_pose = np.zeros(3, 1)
 
         # Implement the MCL algorithm
         # using the sensor model and the motion model
@@ -55,7 +57,7 @@ class ParticleFilter:
         vel[1] = odometry.twist.twist.linear.y
         vel[2] = odometry.twist.twist.angular.z
         self.particles = self.motion_model.evaluate(self.particles, vel)
-        self.get_avg_pose()
+        self.current_pose = self.get_avg_pose()
 
     def scan_callback(self, scan):
         '''
@@ -64,9 +66,9 @@ class ParticleFilter:
         Sample these particles given the last distribution.
         '''
         probs_for_particles = self.sensor_model.evaluate(self.particles, scan)
-        new_particles = np.random.choice(self.particles, probs_for_particles)
+        new_particles = np.random.choice(self.particles, len(self.particles), probs_for_particles)
         self.particles = new_particles
-        self.get_avg_pose()
+        self.current_pose = self.get_avg_pose()
 
     def particle_setup(self, position):
         '''
@@ -89,8 +91,12 @@ class ParticleFilter:
         '''
         x_avg = np.average(self.particles[:,0])
         y_avg = np.average(self.particles[:,1])
-        theta_avg = np.average(self.particles[:,2]) #fix
+        theta_avg = np.arctan2(np.average(np.sin(self.particles[:, 2])), np.average(np.cos(self.particles[:, 2])))
+        avg = np.array([x_avg, y_avg, theta_avg])
+        
+        #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
+        return avg
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
