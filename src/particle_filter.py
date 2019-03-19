@@ -33,6 +33,7 @@ class ParticleFilter:
         self.motion_model = MotionModel()
         self.sensor_model = SensorModel()
         self.particle_cloud_publisher = rospy.Publisher(self.PARTICLE_CLOUD_TOPIC, PointCloud, queue_size=10)
+        self.current_pose = np.zeros((3, 1))
 
         # Implement the MCL algorithm
         # using the sensor model and the motion model
@@ -53,12 +54,12 @@ class ParticleFilter:
         Add noise via motion_model.
         '''
         #[dx, dy, dtheta]
-        vel = np.zeros(3, 1)
+        vel = np.zeros((3, 1))
         vel[0] = odometry.twist.twist.linear.x
         vel[1] = odometry.twist.twist.linear.y
         vel[2] = odometry.twist.twist.angular.z
         self.particles = self.motion_model.evaluate(self.particles, vel)
-        self.get_avg_pose()
+        self.current_pose = self.get_avg_pose()
 
     def scan_callback(self, scan):
         '''
@@ -99,8 +100,12 @@ class ParticleFilter:
         '''
         x_avg = np.average(self.particles[:,0])
         y_avg = np.average(self.particles[:,1])
-        theta_avg = np.average(self.particles[:,2]) #fix
+        theta_avg = np.arctan2(np.average(np.sin(self.particles[:, 2])), np.average(np.cos(self.particles[:, 2])))
+        avg = np.array([x_avg, y_avg, theta_avg])
+        
+        #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
+        return avg
 
     def create_PointCloud(self):
         '''
@@ -116,7 +121,6 @@ class ParticleFilter:
             cloud.points[point].z = 0
         self.particle_cloud_publisher.publish(cloud)
         
-
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
