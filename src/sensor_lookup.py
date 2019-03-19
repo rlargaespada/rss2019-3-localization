@@ -85,5 +85,5 @@ class SensorTable:
         self.p_rand()
         # print(self.probs[0, 700])
 
-table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
-print(table.probs[700, 800])
+# table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
+# print(table.probs[700, 800])

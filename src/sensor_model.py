@@ -13,7 +13,8 @@ class SensorModel:
 
         # Fetch parameters
         self.map_topic = rospy.get_param("~map_topic")
-        self.num_beams_per_particle = rospy.get_param("~num_beams_per_particle")
+        self.take_nth_beam = 4
+        self.num_beams_per_particle = rospy.get_param("~num_beams_per_particle")/self.take_nth_beam
         self.scan_theta_discretization = rospy.get_param("~scan_theta_discretization")
         self.scan_field_of_view = rospy.get_param("~scan_field_of_view")
         #meters/measurement in lookup table 
@@ -76,6 +77,8 @@ class SensorModel:
         # to perform ray tracing from all the particles.
         # This produces a matrix of size N x num_beams_per_particle 
         scans = self.scan_sim.scan(particles)
+        #Bound the distance of a scan to 9.9
+        scans = np.clip(scans, 0, 9.9)
         #Return probabilities
         return self.scans_to_probs(scans, observations, self.grain)
         ####################################
@@ -109,20 +112,28 @@ class SensorModel:
 
         print("Map initialized")
 
-    def scans_to_probs(self, scans, observations, grain):
+    def scans_to_probs(self, scans, laser_scan, grain):
         '''
         take in scans, observations, and grain
         '''
+        observations = np.array(laser_scan.ranges)[::self.take_nth_beam]
+        observations = np.clip(observations, 0, 9.9)
+        if observations.shape[0] != scans.shape[1]:
+            print("WARNING: observations and ray cast sizes different")
+        print(observations.shape)
+        print(scans.shape)
         #Initialize a matrix of probabilities associated with each ray
-        probs = np.zeros((scans.shape[0], self.num_beams_per_particle))
+        probs = np.zeros((scans.shape[0], scans.shape[1]))
         #Iterate through each beam on a scan
-        for beam in xrange(self.num_beams_per_particle):
+        for beam in xrange(scans.shape[1]):
             #set the ground based measurement for each beam
             measurement = int(observations[beam]/grain)
             #Iterate through each particle
             for particle in xrange(scans.shape[0]):
                 #Get the corrosponding measurement/scan probability from lookup table
-                probs[particle, beam] = self.prob_lookup.probs[measurement, scans[particle, beam]]
+                ray_cast = int(scans[particle, beam]/grain)
+                # print(particle, ray_cast, measurement)
+                probs[particle, beam] = self.prob_lookup.probs[measurement, ray_cast]
 
         #Find the overall probability of each scan by averaging each ray probability
         probs_mean = np.mean(probs, axis=1)
