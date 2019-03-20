@@ -1,5 +1,16 @@
-# A reasonable number to start with
+# topics
+odom_topic: "vesc/odom"
+scan_topic: "/scan"
+pose_topic: "will fix later"
+avg_pose_topic: "/base_link"
+particle_topic: "/particle_cloud"
+vis_topic: "visualization_marker"
+
+# particle filter params
 num_particles: 200
+motion_std: 0.5 # std of motion model noise (meters)
+sensor_std: 0.5 # std of sensor model noise (meters)
+dt: 0.02 # timestep over which to apply actuation (seconds)
 
 # The number of lidar beams emitted from
 # each particle. This doesn't need to be
