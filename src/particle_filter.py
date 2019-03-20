@@ -3,9 +3,10 @@ import numpy as np
 import rospy
 from sensor_model import SensorModel
 from motion_model import MotionModel
-from geometry_msgs.msg import PoseWithCovarianceStamped, Point32
+from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, PointCloud
+from visualization_msgs.msg import Marker
 
 class ParticleFilter:
 
@@ -26,6 +27,7 @@ class ParticleFilter:
             self.POSE_TOPIC = "will fix later"
             self.AVG_POSE_TOPIC = "/base_link"
         self.PARTICLE_CLOUD_TOPIC = "/particle_cloud"
+        self.VISUALIZATION_TOPIC = "visualization_marker"
         #Set size of partcles: First number is #particles
         self.particles = np.zeros((200, 3))
         self.std_dev = .5 #standard deviation of simulated sensor noise
@@ -33,6 +35,7 @@ class ParticleFilter:
         self.motion_model = MotionModel()
         self.sensor_model = SensorModel()
         self.particle_cloud_publisher = rospy.Publisher(self.PARTICLE_CLOUD_TOPIC, PointCloud, queue_size=10)
+        self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
         self.current_pose = np.zeros((3, 1))
 
         # Implement the MCL algorithm
@@ -60,6 +63,7 @@ class ParticleFilter:
         vel[2] = odometry.twist.twist.angular.z
         self.particles = self.motion_model.evaluate(self.particles, vel)
         self.current_pose = self.get_avg_pose()
+        self.create_PointCloud()
 
     def scan_callback(self, scan):
         '''
@@ -75,8 +79,8 @@ class ParticleFilter:
         #Get particles corrosponding to the indexes chosen
         self.particles = np.array([self.particles[i, :] for i in particle_index])
         #Create point cloud for the particles
+        self.current_pose = self.get_avg_pose()
         self.create_PointCloud()
-        self.get_avg_pose()
 
     def particle_setup(self, position):
         '''
@@ -109,8 +113,7 @@ class ParticleFilter:
 
     def create_PointCloud(self):
         '''
-        Create and publish point cloud 
-        of points
+        Create and publish point cloud of particles and current pose marker
         '''
         cloud = PointCloud()
         cloud.header.frame_id = "/map"
@@ -119,7 +122,36 @@ class ParticleFilter:
             cloud.points[point].x = self.particles[point, 0]
             cloud.points[point].y = self.particles[point, 1]
             cloud.points[point].z = 0
+        
+        #arrow marker for current pose
+        current_pose = Marker()
+        current_pose.header.frame_id = "/map"
+        current_pose.header.stamp = rospy.Time.now()
+        current_pose.ns = "current_pose_marker"
+        current_pose.id = 0
+        current_pose.type = current_pose.ARROW
+        current_pose.action = current_pose.ADD
+
+        #start point and end point
+        current_pose.points = [Point(), Point()]
+        #start point
+        current_pose.points[0].x = self.current_pose[0]
+        current_pose.points[0].y = self.current_pose[1]
+        current_pose.points[0].z = 0
+        #end point
+        current_pose.points[1].x = np.cos(self.current_pose[2]) + self.current_pose[0]
+        current_pose.points[1].y = np.cos(self.current_pose[2]) + self.current_pose[1]
+        current_pose.points[1].z = 0
+
+        current_pose.scale.x = 0.2
+        current_pose.scale.y = 0.4
+
+        current_pose.color.a = 1.0
+        current_pose.color.g = 1.0
+
         self.particle_cloud_publisher.publish(cloud)
+        self.current_pose_publisher.publish(current_pose)
+
         
 
 if __name__ == "__main__":
