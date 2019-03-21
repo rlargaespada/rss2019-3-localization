@@ -13,26 +13,24 @@ class ParticleFilter:
     def __init__(self):
 
         # Get parameters
-        self.particle_filter_frame = \
-                rospy.get_param("~particle_filter_frame")
-        self.sim = True
-        if self.sim: 
-            self.ODOMETRY_TOPIC = "/odom"
-            self.SCAN_TOPIC = "/scan"
-            self.POSE_TOPIC = "/initialpose"
-            self.AVG_POSE_TOPIC = "/base_link_pf"
-        else:
-            self.ODOMETRY_TOPIC = "vesc/odom"
-            self.SCAN_TOPIC = "/scan"
-            self.POSE_TOPIC = "will fix later"
-            self.AVG_POSE_TOPIC = "/base_link"
-        self.PARTICLE_CLOUD_TOPIC = "/particle_cloud"
-        self.VISUALIZATION_TOPIC = "visualization_marker"
-        #Set size of partcles: First number is #particles
-        self.particles = np.zeros((200, 3))
-        self.std_dev = .5 #standard deviation of simulated sensor noise
+        self.particle_filter_frame = rospy.get_param("~particle_filter_frame")
+        self.ODOMETRY_TOPIC = rospy.get_param("~odom_topic")
+        self.SCAN_TOPIC = rospy.get_param("~scan_topic")
+        self.POSE_TOPIC = rospy.get_param("~pose_topic")
+        self.AVG_POSE_TOPIC = rospy.get_param("~avg_pose_topic")
+        self.PARTICLE_CLOUD_TOPIC = rospy.get_param("~particle_topic")
+        self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
+        self.NUM_PARTICLES = rospy.get_param("~num_particles")
+
+        # Set size of partcles
+        self.particles = np.zeros((self.NUM_PARTICLES, 3))
+
+        # Get model parameters
+        self.sensor_std = rospy.get_param("~sensor_std") # standard deviation of simulated sensor noise
+        self.motion_std = rospy.get_param("~motion_std") # standard deviation of motion model noise
+        self.dt = rospy.get_param("~dt") # timestep over which to apply actuation (seconds)
         # Initialize the models
-        self.motion_model = MotionModel()
+        self.motion_model = MotionModel(self.motion_std, self.dt)
         self.sensor_model = SensorModel()
         self.particle_cloud_publisher = rospy.Publisher(self.PARTICLE_CLOUD_TOPIC, PointCloud, queue_size=10)
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
@@ -53,7 +51,7 @@ class ParticleFilter:
 
     def odometry_callback(self, odometry):
         '''
-        Take in odometry data.  
+        Take in odometry data.
         Add noise via motion_model.
         '''
         #[dx, dy, dtheta]
@@ -67,7 +65,7 @@ class ParticleFilter:
 
     def scan_callback(self, scan):
         '''
-        Take in scan. 
+        Take in scan.
         Pass most recent partcles into sensor_model.
         Sample these particles given the last distribution.
         '''
@@ -92,9 +90,9 @@ class ParticleFilter:
         #Note on theta: This is calculated so 0 rad is pointing down on the map (along
         #grid marks).  Counterclockwise in + angle to pi and clockwise is - angle to pi
         N = len(self.particles)
-        self.particles[:, 0] = x + np.random.randn(N)*self.std_dev
-        self.particles[:, 1] = y + np.random.randn(N)*self.std_dev
-        self.particles[:, 2] = theta + np.random.randn(N)*self.std_dev
+        self.particles[:, 0] = x + np.random.randn(N)*self.sensor_std
+        self.particles[:, 1] = y + np.random.randn(N)*self.sensor_std
+        self.particles[:, 2] = theta + np.random.randn(N)*self.sensor_std
         self.particles[:, 2] %= 2* np.pi
         print(self.particles)
 
@@ -106,7 +104,7 @@ class ParticleFilter:
         y_avg = np.average(self.particles[:,1])
         theta_avg = np.arctan2(np.average(np.sin(self.particles[:, 2])), np.average(np.cos(self.particles[:, 2])))
         avg = np.array([x_avg, y_avg, theta_avg])
-        
+
         #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
@@ -122,7 +120,7 @@ class ParticleFilter:
             cloud.points[point].x = self.particles[point, 0]
             cloud.points[point].y = self.particles[point, 1]
             cloud.points[point].z = 0
-        
+
         #arrow marker for current pose
         current_pose = Marker()
         current_pose.header.frame_id = "/map"
@@ -152,7 +150,7 @@ class ParticleFilter:
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
 
-        
+
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
