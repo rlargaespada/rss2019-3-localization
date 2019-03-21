@@ -2,10 +2,10 @@ import numpy as np
 
 class MotionModel:
 
-    def __init__(self):
+    def __init__(self, std_dev, delta_t):
 
-        self.std_dev = 1 #standard deviation of simulated sensor noise
-        self.delta_t = 0.05 #20Hz
+        self.std_dev = std_dev #standard deviation of simulated sensor noise
+        self.delta_t = delta_t #20Hz
 
     def evaluate(self, particles, odometry):
         """
@@ -14,7 +14,7 @@ class MotionModel:
 
         args:
             particles: An Nx3 matrix of the form:
-            
+
                 [x0 y0 theta0]
                 [x1 y0 theta1]
                 [    ...     ]
@@ -25,7 +25,7 @@ class MotionModel:
             particles: An updated matrix of the
                 same size
         """
-        
+
         ####################################
         N = len(particles)
         #change heading
@@ -37,6 +37,6 @@ class MotionModel:
         particles[:, 1] += odometry[1]*self.delta_t + np.random.randn(N)*self.std_dev
 
         return particles
-        
+
 
         ####################################
