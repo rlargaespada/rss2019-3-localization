@@ -169,7 +169,7 @@ class ParticleFilter:
         current_pose.points[0].z = 0
         #end point
         current_pose.points[1].x = np.cos(self.current_pose[2]) + self.current_pose[0]
-        current_pose.points[1].y = np.cos(self.current_pose[2]) + self.current_pose[1]
+        current_pose.points[1].y = np.sin(self.current_pose[2]) + self.current_pose[1]
         current_pose.points[1].z = 0
 
         current_pose.scale.x = 0.2
