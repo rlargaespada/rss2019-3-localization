@@ -7,7 +7,7 @@ class MotionModel:
         self.std_dev = std_dev #standard deviation of simulated sensor noise
         self.delta_t = delta_t #20Hz
 
-    def evaluate(self, particles, odometry):
+    def evaluate(self, particles, odometry, delta_t):
         """
         Update the particles to reflect probable
         future states given the odometry data.
@@ -27,16 +27,38 @@ class MotionModel:
         """
 
         ####################################
-        N = len(particles)
-        #change heading
-        particles[:, 2] += odometry[2]*self.delta_t + np.random.randn(N)*self.std_dev
-        particles[:, 2] %= 2* np.pi
+        # N = len(particles)
+        # #change heading
+        # particles[:, 2] += odometry[2]*self.delta_t + np.random.randn(N)*self.std_dev
+        # particles[:, 2] %= 2* np.pi
 
-        #predict x and y positions
-        particles[:, 0] += odometry[0]*self.delta_t + np.random.randn(N)*self.std_dev
-        particles[:, 1] += odometry[1]*self.delta_t + np.random.randn(N)*self.std_dev
+        # #predict x and y positions
+        # particles[:, 0] += odometry[0]*self.delta_t + np.random.randn(N)*self.std_dev
+        # particles[:, 1] += odometry[1]*self.delta_t + np.random.randn(N)*self.std_dev
 
-        return particles
+        # return particles
 
+        N = len(particles)                      # Number of particles
+        odom_corrected = odometry*delta_t       #Translate the velocities into changes in x, y, and theta
+        odom_adjust = np.zeros((N, 3))          #Will become our new particles
+        #Iterate through every particle
+        for i in range(N):
+            #Retrieve theta from particle
+            theta = particles[i, 2]
+            #Transform our changes into map reference frame
+            odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
+
+        #add noise to each dimension
+        odom_adjust[:, 2] += np.random.randn(N)*self.std_dev*delta_t
+        odom_adjust[:, 0] += np.random.randn(N)*self.std_dev*delta_t
+        odom_adjust[:, 1] += np.random.randn(N)*self.std_dev*delta_t
+        #return updated particles
+        return particles + odom_adjust
+
+    def apply_odom(self, theta, odom_data):
+        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
+                                    [np.sin(theta), np.cos(theta), 0], 
+                                    [0,0,1.0]])
+        return np.matmul(rotation_matrix, odom_data)
 
         ####################################

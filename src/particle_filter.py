@@ -1,12 +1,14 @@
 #!/usr/bin/env python2
 import numpy as np
 import rospy
+import time
 from sensor_model import SensorModel
 from motion_model import MotionModel
 from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, PointCloud
 from visualization_msgs.msg import Marker
+from ackermann_msgs.msg import AckermannDriveStamped
 
 class ParticleFilter:
 
@@ -21,6 +23,7 @@ class ParticleFilter:
         self.PARTICLE_CLOUD_TOPIC = rospy.get_param("~particle_topic")
         self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
         self.NUM_PARTICLES = rospy.get_param("~num_particles")
+        self.DRIVE_TOPIC = rospy.get_param("~drive_topic")
 
         # Set size of partcles
         self.particles = np.zeros((self.NUM_PARTICLES, 3))
@@ -36,6 +39,14 @@ class ParticleFilter:
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
         self.current_pose = np.zeros((3, 1))
 
+        #Initialize drive model
+        self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
+        self.drive_msg = AckermannDriveStamped()
+        self.create_ackermann()
+
+        #Initialize time tracker
+        self.time_last = time.time()
+
         # Implement the MCL algorithm
         # using the sensor model and the motion model
         #
@@ -46,7 +57,7 @@ class ParticleFilter:
         # Publish a transformation frame between the map
         # and the particle_filter_frame.
         rospy.Subscriber(self.POSE_TOPIC, PoseWithCovarianceStamped, self.particle_setup)
-        # rospy.Subscriber(self.ODOMETRY_TOPIC, Odometry, self.odometry_callback)
+        rospy.Subscriber(self.ODOMETRY_TOPIC, Odometry, self.odometry_callback)
         rospy.Subscriber(self.SCAN_TOPIC, LaserScan, self.scan_callback)
 
     def odometry_callback(self, odometry):
@@ -54,14 +65,22 @@ class ParticleFilter:
         Take in odometry data.
         Add noise via motion_model.
         '''
-        #[dx, dy, dtheta]
+        #Get velocity from odometry message
         vel = np.zeros((3, 1))
-        vel[0] = odometry.twist.twist.linear.x
-        vel[1] = odometry.twist.twist.linear.y
-        vel[2] = odometry.twist.twist.angular.z
-        self.particles = self.motion_model.evaluate(self.particles, vel)
+        vel[0] = odometry.twist.twist.linear.x  #d_x
+        vel[1] = odometry.twist.twist.linear.y  #d_y
+        vel[2] = odometry.twist.twist.angular.z #d_theta
+        #Get change in time
+        time_change = time.time() - self.time_last
+        self.time_last = time.time()
+        #update particles
+        self.particles = self.motion_model.evaluate(self.particles, vel, time_change)
+        #Average pose
         self.current_pose = self.get_avg_pose()
+        #Show particles via rviz
         self.create_PointCloud()
+        #publish ackermann message
+        self.steer_pub.publish(self.drive_msg)
 
     def scan_callback(self, scan):
         '''
@@ -71,13 +90,13 @@ class ParticleFilter:
         '''
         #Get probabilities for particles
         probs_for_particles = self.sensor_model.evaluate(self.particles, scan)
-        print(probs_for_particles)
         #Get indexes for the particles based on probability distribution
         particle_index = np.random.choice(self.particles.shape[0], self.particles.shape[0], replace=True, p=probs_for_particles)
         #Get particles corrosponding to the indexes chosen
         self.particles = np.array([self.particles[i, :] for i in particle_index])
         #Create point cloud for the particles
         self.current_pose = self.get_avg_pose()
+        print(self.current_pose)
         self.create_PointCloud()
 
     def particle_setup(self, position):
@@ -94,7 +113,8 @@ class ParticleFilter:
         self.particles[:, 1] = y + np.random.randn(N)*self.sensor_std
         self.particles[:, 2] = theta + np.random.randn(N)*self.sensor_std
         self.particles[:, 2] %= 2* np.pi
-        print(self.particles)
+        self.time_last = time.time()
+        print(self.particles[1])
 
     def get_avg_pose(self):
         '''
@@ -149,6 +169,17 @@ class ParticleFilter:
 
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
+
+    def create_ackermann(self):
+        self.drive_msg.header.stamp = rospy.Time.now()
+        self.drive_msg.header.frame_id = "1"
+        self.drive_msg.drive.steering_angle = 0.
+        self.drive_msg.drive.steering_angle_velocity = 0
+        self.drive_msg.drive.speed = 1.
+        self.drive_msg.drive.acceleration = 0
+        self.drive_msg.drive.jerk = 0
+
+
 
 
 

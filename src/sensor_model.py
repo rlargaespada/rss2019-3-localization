@@ -13,12 +13,12 @@ class SensorModel:
 
         # Fetch parameters
         self.map_topic = rospy.get_param("~map_topic")
-        self.take_nth_beam = 4
+        self.take_nth_beam = rospy.get_param("~take_nth_beams")
         self.num_beams_per_particle = rospy.get_param("~num_beams_per_particle")/self.take_nth_beam
         self.scan_theta_discretization = rospy.get_param("~scan_theta_discretization")
         self.scan_field_of_view = rospy.get_param("~scan_field_of_view")
         #meters/measurement in lookup table 
-        self.grain = .01
+        self.grain = rospy.get_param("~lookup_grain")
         #Get lookup table: Values listed as (a_hit, a_short, a_max, a_rand, sigma, max_range, dz)
         self.prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, .5, 10, self.grain)
         ####################################
@@ -120,8 +120,6 @@ class SensorModel:
         observations = np.clip(observations, 0, 9.9)
         if observations.shape[0] != scans.shape[1]:
             print("WARNING: observations and ray cast sizes different")
-        print(observations.shape)
-        print(scans.shape)
         #Initialize a matrix of probabilities associated with each ray
         probs = np.zeros((scans.shape[0], scans.shape[1]))
         #Iterate through each beam on a scan
