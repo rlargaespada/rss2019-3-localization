@@ -60,27 +60,34 @@ class ParticleFilter:
         rospy.Subscriber(self.ODOMETRY_TOPIC, Odometry, self.odometry_callback)
         rospy.Subscriber(self.SCAN_TOPIC, LaserScan, self.scan_callback)
 
+        # timing gate
+        self.in_scan = False # only allow motion to run when we are not processing scan data
+        self.in_motion = False # only allow scan to run when not in motion
+
     def odometry_callback(self, odometry):
         '''
         Take in odometry data.
         Add noise via motion_model.
         '''
-        #Get velocity from odometry message
-        vel = np.zeros((3, 1))
-        vel[0] = odometry.twist.twist.linear.x  #d_x
-        vel[1] = odometry.twist.twist.linear.y  #d_y
-        vel[2] = odometry.twist.twist.angular.z #d_theta
-        #Get change in time
-        time_change = time.time() - self.time_last
-        self.time_last = time.time()
-        #update particles
-        self.particles = self.motion_model.evaluate(self.particles, vel, time_change)
-        #Average pose
-        self.current_pose = self.get_avg_pose()
-        #Show particles via rviz
-        self.create_PointCloud()
-        #publish ackermann message
-        self.steer_pub.publish(self.drive_msg)
+        if not self.in_scan:
+            #Get velocity from odometry message
+            self.in_motion = True
+            vel = np.zeros((3, 1))
+            vel[0] = odometry.twist.twist.linear.x  #d_x
+            vel[1] = odometry.twist.twist.linear.y  #d_y
+            vel[2] = odometry.twist.twist.angular.z #d_theta
+            #Get change in time
+            time_change = time.time() - self.time_last
+            self.time_last = time.time()
+            #update particles
+            self.particles = self.motion_model.evaluate(self.particles, vel, time_change)
+            #Average pose
+            self.current_pose = self.get_avg_pose()
+            #Show particles via rviz
+            self.create_PointCloud()
+            #publish ackermann message
+            self.steer_pub.publish(self.drive_msg)
+            self.in_motion = False
 
     def scan_callback(self, scan):
         '''
@@ -88,16 +95,20 @@ class ParticleFilter:
         Pass most recent partcles into sensor_model.
         Sample these particles given the last distribution.
         '''
-        #Get probabilities for particles
-        probs_for_particles = self.sensor_model.evaluate(self.particles, scan)
-        #Get indexes for the particles based on probability distribution
-        particle_index = np.random.choice(self.particles.shape[0], self.particles.shape[0], replace=True, p=probs_for_particles)
-        #Get particles corrosponding to the indexes chosen
-        self.particles = np.array([self.particles[i, :] for i in particle_index])
-        #Create point cloud for the particles
-        self.current_pose = self.get_avg_pose()
-        print(self.current_pose)
-        self.create_PointCloud()
+        if not self.in_motion:
+            self.in_scan = True
+            #Get probabilities for particles
+            probs_for_particles = self.sensor_model.evaluate(self.particles, scan)
+            #Get indexes for the particles based on probability distribution
+            particle_index = np.random.choice(self.particles.shape[0], self.particles.shape[0], replace=True, p=probs_for_particles)
+            #Get particles corrosponding to the indexes chosen
+            self.particles = np.array([self.particles[i, :] for i in particle_index])
+            #Create point cloud for the particles
+            self.current_pose = self.get_avg_pose()
+            print(self.current_pose)
+            self.create_PointCloud()
+
+            self.in_scan = False
 
     def particle_setup(self, position):
         '''
