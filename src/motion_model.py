@@ -92,6 +92,8 @@ class MotionModel:
         r = np.array([[np.cos(th), -np.sin(th), np.zeros(N)],
                       [np.sin(th), np.cos(th), np.zeros(N)], 
                       [np.zeros(N),np.zeros(N),1.0*np.ones(N)]])
+        print(r.shape)
+        prunt(o.shape)
         return np.matmul(r, o)   
         
 
