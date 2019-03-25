@@ -42,7 +42,7 @@ class MotionModel:
         N = len(particles)                      # Number of particles
         odom_corrected = odometry*delta_t       #Translate the velocities into changes in x, y, and theta
         #Iterate through every particle
-         for i in range(N):
+        for i in range(N):
             #Retrieve theta from particle
             theta = particles[i, 2]
             #Transform our changes into map reference frame
@@ -52,7 +52,7 @@ class MotionModel:
         p = particles #(200,3)
         o = odom_corrected #(3,1)
         v_apply_odom = np.vectorize(self.apply_odom2)
-        self.odom_adjust2 = v_apply_odom(th,o)
+        self.odom_adjust2 = v_apply_odom(th,o,N)
         
         
         
@@ -88,10 +88,10 @@ class MotionModel:
         #return updated particles
         return particles + self.odom_adjust
     
-    def apply_odom2(self, th, o):
-        r = np.array([[np.cos(th), -np.sin(th), np.zeros(num_particles)],
-                      [np.sin(th), np.cos(th), np.zeros(num_particles)], 
-                      [np.zeros(num_particles),np.zeros(num_particles),1.0*np.ones(num_particles)]])
+    def apply_odom2(self, th, o, N):
+        r = np.array([[np.cos(th), -np.sin(th), np.zeros(N)],
+                      [np.sin(th), np.cos(th), np.zeros(N)], 
+                      [np.zeros(N),np.zeros(N),1.0*np.ones(N)]])
         return np.matmul(r, o)   
         
 
