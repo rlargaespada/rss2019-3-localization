@@ -51,8 +51,8 @@ class MotionModel:
         th = particles[:,2] # (200,3)
         p = particles #(200,3)
         o = odom_corrected #(3,1)
-        v_apply_odom = np.vectorize(self.apply_odom2)
-        self.odom_adjust2 = v_apply_odom(th,o,N)
+       
+        self.odom_adjust2 = self.apply_odom2(th,o,N)
         
         
         
