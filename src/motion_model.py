@@ -51,7 +51,7 @@ class MotionModel:
         th = particles[:,2] 
         r = np.array([[np.cos(th), -np.sin(th), np.zeros(len(th))],
                       [np.sin(th), np.cos(th), np.zeros(len(th))], 
-                      [np.zeros(len(th)),np.zeros(len(th)),np.ones(len(th))]])
+                      [np.zeros(len(th)),np.zeros(len(th)),1.0*np.ones(len(th))]])
         #r = r.reshape((3,3,1))
         #p = np.repeat(particles[:, :, np.newaxis], 3, axis=2)
         #p = np.swapaxes(p, 1, 2)
@@ -60,10 +60,10 @@ class MotionModel:
         print('r ',r.shape)
         print('particles ',p)
         print("particles_shape ", p.shape)
-        m = np.dot(p,r)
+        m = np.matmul(p,r)
         self.odom_adjust2 = np.zeros((200,3))
         for i in range(200):
-            self.odom_adjust2[i,:] = m[i,:,i]
+            self.odom_adjust2[i,:] = m[:,i,i]
             
         print(self.odom_adjust2.shape)
         
