@@ -47,14 +47,15 @@ class MotionModel:
         #    theta = particles[i, 2]
             #Transform our changes into map reference frame
         #    self.odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
-        print("particles", particles[:2, :])
+        #print("particles", particles[:2, :])
         th = particles[:,2] 
-        r = np.array([[np.cos(th), -np.sin(th), 0],
-                      [np.sin(th), np.cos(th), 0], 
-                      [0,0,1.0]])
-        r = r.reshape((3,3,1))
-        p = np.repeat(particles[:, :, np.newaxis], 3, axis=2)
-        p = np.swapaxes(p, 1, 2)
+        r = np.array([[np.cos(th), -np.sin(th), np.zeros(len(th))],
+                      [np.sin(th), np.cos(th), np.zeros(len(th))], 
+                      [np.zeros(len(th)),np.zeros(len(th)),np.ones(len(th))]])
+        #r = r.reshape((3,3,1))
+        #p = np.repeat(particles[:, :, np.newaxis], 3, axis=2)
+        #p = np.swapaxes(p, 1, 2)
+        p = particles
         print('th', th.shape)
         print('r ',r.shape)
         print('particles ',p)
