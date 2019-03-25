@@ -93,7 +93,7 @@ class MotionModel:
                       [np.sin(th), np.cos(th), np.zeros(N)], 
                       [np.zeros(N),np.zeros(N),1.0*np.ones(N)]])
         print(r.shape)
-        prunt(o.shape)
+        print(o.shape)
         return np.matmul(r, o)   
         
 
