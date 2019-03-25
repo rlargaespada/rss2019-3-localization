@@ -52,7 +52,7 @@ class MotionModel:
         p = particles #(200,3)
         o = odom_corrected #(3,1)
        
-        self.odom_adjust = self.apply_odom2(th,o,N)
+        self.odom_adjust = self.apply_odom(th,o,N)
         
         
 
