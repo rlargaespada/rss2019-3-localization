@@ -2,10 +2,11 @@ import numpy as np
 
 class MotionModel:
 
-    def __init__(self, std_dev, delta_t):
+    def __init__(self, std_dev, delta_t, num_particles):
 
         self.std_dev = std_dev #standard deviation of simulated sensor noise
         self.delta_t = delta_t #20Hz
+        self.odom_adjust = np.zeros((num_particles, 3))          #Will become our new particles
 
     def evaluate(self, particles, odometry, delta_t):
         """
@@ -40,32 +41,31 @@ class MotionModel:
 
         N = len(particles)                      # Number of particles
         odom_corrected = odometry*delta_t       #Translate the velocities into changes in x, y, and theta
-        odom_adjust = np.zeros((N, 3))          #Will become our new particles
         #Iterate through every particle
-        #for i in range(N):
+        for i in range(N):
             #Retrieve theta from particle
-         #   theta = particles[i, 2]
+           theta = particles[i, 2]
             #Transform our changes into map reference frame
-          #  odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
+           self.odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
             
-        th = particles[:,2] 
-        r = np.array([[np.cos(th), -np.sin(th), 0],
-                      [np.sin(th), np.cos(th), 0], 
-                      [0,0,1.0]])
-        r = r.reshape((3,3,1))
-        p = np.array([[particles],[particles],[particles]]).reshape((200,3,3))[0,0,:]
-        print('th 'th.shape)
-        print('r ',r.shape)
-        print('particles ',p.shape)
-        odom_adjust = np.matmul(p,r)
-        print(odom_adjust.shape)
+        # th = particles[:,2] 
+        # r = np.array([[np.cos(th), -np.sin(th), 0],
+        #               [np.sin(th), np.cos(th), 0], 
+        #               [0,0,1.0]])
+        # r = r.reshape((3,3,1))
+        # p = np.array([[particles],[particles],[particles]]).reshape((200,3,3))[0,0,:]
+        # print('th', th.shape)
+        # print('r ',r.shape)
+        # print('particles ',p.shape)
+        # self.odom_adjust = np.matmul(p,r)
+        # print(self.odom_adjust.shape)
 
         #add noise to each dimension
-        odom_adjust[:, 2] += np.random.randn(N)*self.std_dev*delta_t
-        odom_adjust[:, 0] += np.random.randn(N)*self.std_dev*delta_t
-        odom_adjust[:, 1] += np.random.randn(N)*self.std_dev*delta_t
+        self.odom_adjust[:, 2] += np.random.randn(N)*self.std_dev*delta_t
+        self.odom_adjust[:, 0] += np.random.randn(N)*self.std_dev*delta_t
+        self.odom_adjust[:, 1] += np.random.randn(N)*self.std_dev*delta_t
         #return updated particles
-        return particles + odom_adjust
+        return particles + self.odom_adjust
 
     def apply_odom(self, theta, odom_data):
         rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],

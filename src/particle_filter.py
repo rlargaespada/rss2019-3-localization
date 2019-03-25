@@ -41,7 +41,7 @@ class ParticleFilter:
         self.motion_std = rospy.get_param("~motion_std") # standard deviation of motion model noise
         self.dt = rospy.get_param("~dt") # timestep over which to apply actuation (seconds)
         # Initialize the models
-        self.motion_model = MotionModel(self.motion_std, self.dt)
+        self.motion_model = MotionModel(self.motion_std, self.dt, self.NUM_PARTICLES)
         self.sensor_model = SensorModel()
         self.particle_cloud_publisher = rospy.Publisher(self.PARTICLE_CLOUD_TOPIC, PointCloud, queue_size=10)
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
