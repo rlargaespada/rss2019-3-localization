@@ -94,7 +94,7 @@ class MotionModel:
                       [np.zeros(N),np.zeros(N),1.0*np.ones(N)]])
         print(r.shape)
         print(o.shape)
-        return np.matmul(r, o)   
+        return np.einsum('ijk,jl->ik',r,o)  
         
 
     def apply_odom(self, theta, odom_data):
