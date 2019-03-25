@@ -42,17 +42,17 @@ class MotionModel:
         N = len(particles)                      # Number of particles
         odom_corrected = odometry*delta_t       #Translate the velocities into changes in x, y, and theta
         #Iterate through every particle
-        for i in range(N):
+        #for i in range(N):
             #Retrieve theta from particle
-            theta = particles[i, 2]
+         #   theta = particles[i, 2]
             #Transform our changes into map reference frame
-            self.odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
+          #  self.odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
 
         th = particles[:,2] # (200,3)
         p = particles #(200,3)
         o = odom_corrected #(3,1)
        
-        self.odom_adjust2 = self.apply_odom2(th,o,N)
+        self.odom_adjust = self.apply_odom2(th,o,N)
         
         
 
@@ -64,7 +64,7 @@ class MotionModel:
         #return updated particles
         return particles + self.odom_adjust
     
-    def apply_odom2(self, th, o, N):
+    def apply_odom(self, th, o, N):
         r = np.array([[np.cos(th), -np.sin(th), np.zeros(N)],
                       [np.sin(th), np.cos(th), np.zeros(N)], 
                       [np.zeros(N),np.zeros(N),1.0*np.ones(N)]])
@@ -73,10 +73,10 @@ class MotionModel:
         return np.einsum('ijk,jl->ik',r,o).T  
         
 
-    def apply_odom(self, theta, odom_data):
-        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
-                                    [np.sin(theta), np.cos(theta), 0], 
-                                    [0,0,1.0]])
-        return np.matmul(rotation_matrix, odom_data)
+    #def apply_odom(self, theta, odom_data):
+    #    rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
+    #                                [np.sin(theta), np.cos(theta), 0], 
+    #                                [0,0,1.0]])
+    #    return np.matmul(rotation_matrix, odom_data)
 
         ####################################
