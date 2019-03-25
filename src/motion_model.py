@@ -42,11 +42,18 @@ class MotionModel:
         odom_corrected = odometry*delta_t       #Translate the velocities into changes in x, y, and theta
         odom_adjust = np.zeros((N, 3))          #Will become our new particles
         #Iterate through every particle
-        for i in range(N):
+        #for i in range(N):
             #Retrieve theta from particle
-            theta = particles[i, 2]
+         #   theta = particles[i, 2]
             #Transform our changes into map reference frame
-            odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
+          #  odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
+            
+        th = particles[:,2] 
+        r = np.array([[np.cos(th), -np.sin(th), 0],
+                      [np.sin(th), np.cos(th), 0], 
+                      [0,0,1.0]])
+        odom_adjust = np.matmul(particles,r)
+        print(odom_adjust.shape)
 
         #add noise to each dimension
         odom_adjust[:, 2] += np.random.randn(N)*self.std_dev*delta_t
