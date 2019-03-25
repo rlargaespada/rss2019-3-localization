@@ -48,11 +48,11 @@ class MotionModel:
             #Transform our changes into map reference frame
             self.odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
         #print("particles", particles[:2, :])
-        th = particles[:,2].reshape((200,3)) # (200,3)
+        th = particles[:,2] # (200,3)
         p = particles #(200,3)
         o = odom_corrected #(3,1)
-        v_apply_odom = np.vectorize(apply_odom2)
-        self.odom_adjust2 = self.v_apply_odom(th,o).T
+        v_apply_odom = np.vectorize(self.apply_odom2)
+        self.odom_adjust2 = v_apply_odom(th,o)
         
         
         
@@ -89,9 +89,9 @@ class MotionModel:
         return particles + self.odom_adjust
     
     def apply_odom2(self, th, o):
-        r = np.array([[np.cos(th), -np.sin(th), np.zeros(len(th))],
-                      [np.sin(th), np.cos(th), np.zeros(len(th))], 
-                      [np.zeros(len(th)),np.zeros(len(th)),1.0*np.ones(len(th))]])
+        r = np.array([[np.cos(th), -np.sin(th), np.zeros(num_particles)],
+                      [np.sin(th), np.cos(th), np.zeros(num_particles)], 
+                      [np.zeros(num_particles),np.zeros(num_particles),1.0*np.ones(num_particles)]])
         return np.matmul(r, o)   
         
 
