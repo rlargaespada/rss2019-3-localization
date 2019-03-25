@@ -2,6 +2,8 @@
 import numpy as np
 import rospy
 import time
+import tf
+from tf.transformations import quaternion_from_euler
 from sensor_model import SensorModel
 from motion_model import MotionModel
 from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
@@ -9,6 +11,12 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, PointCloud
 from visualization_msgs.msg import Marker
 from ackermann_msgs.msg import AckermannDriveStamped
+from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import Transform
+from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Quaternion
+from std_msgs.msg import Header
+
 
 class ParticleFilter:
 
@@ -43,6 +51,9 @@ class ParticleFilter:
         self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
+
+        self.transform_stamped_msg = TransformStamped()
+        self.frame_transform_pub = rospy.Publisher(self.AVG_POSE_TOPIC, TransformStamped, queue_size=10)
 
         #Initialize time tracker
         self.time_last = time.time()
@@ -180,6 +191,8 @@ class ParticleFilter:
 
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
+        self.create_transform()
+        self.frame_transform_pub.publish(self.transform_stamped_msg)
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
@@ -189,6 +202,28 @@ class ParticleFilter:
         self.drive_msg.drive.speed = 1.
         self.drive_msg.drive.acceleration = 0
         self.drive_msg.drive.jerk = 0
+
+    def create_transform(self):
+        header = Header()
+        header.stamp = rospy.rostime.Time.now()
+        header.frame_id = "/map"
+        transform = Transform()
+        vec = Vector3()
+        vec.x = self.current_pose[0]
+        vec.y = self.current_pose[1]
+        vec.z = 0
+        quat = Quaternion()
+        quaternion_from_current = quaternion_from_euler(0, 0, self.current_pose[2])
+        quat.x = quaternion_from_current[0]
+        quat.y = quaternion_from_current[1]
+        quat.z = quaternion_from_current[2]
+        quat.w = quaternion_from_current[3]
+        transform.translation = vec
+        transform.rotation = quat
+        self.transform_stamped_msg.header = header
+        self.transform_stamped_msg.child_frame_id = self.AVG_POSE_TOPIC
+        self.transform_stamped_msg.transform = transform
+        
 
 
 
