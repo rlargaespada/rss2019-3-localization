@@ -60,7 +60,7 @@ class MotionModel:
         print('r ',r.shape)
         print('particles ',p)
         print("particles_shape ", p.shape)
-        m = np.matmul(p,r)
+        m = np.dot(p,r)
         self.odom_adjust2 = np.zeros((200,3))
         for i in range(200):
             self.odom_adjust2[i,:] = m[i,:,i]
