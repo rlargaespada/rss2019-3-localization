@@ -48,24 +48,33 @@ class MotionModel:
             #Transform our changes into map reference frame
             self.odom_adjust[i, :] = self.apply_odom(theta, odom_corrected).T
         #print("particles", particles[:2, :])
-        th = particles[:,2] 
-        r = np.array([[np.cos(th), -np.sin(th), np.zeros(len(th))],
-                      [np.sin(th), np.cos(th), np.zeros(len(th))], 
-                      [np.zeros(len(th)),np.zeros(len(th)),1.0*np.ones(len(th))]])
+        th = particles[:,2].reshape((200,3)) # (200,3)
+        p = particles #(200,3)
+        o = odom_corrected #(3,1)
+        v_apply_odom = np.vectorize(apply_odom2)
+        self.odom_adjust2 = self.v_apply_odom(th,o)
+        
+        
+        
+        
+        
+        #r = np.array([[np.cos(th), -np.sin(th), np.zeros(len(th))],
+        #              [np.sin(th), np.cos(th), np.zeros(len(th))], 
+        #[np.zeros(len(th)),np.zeros(len(th)),1.0*np.ones(len(th))]])
         #r = r.reshape((3,3,1))
         #p = np.repeat(particles[:, :, np.newaxis], 3, axis=2)
         #p = np.swapaxes(p, 1, 2)
-        p = particles
-        print('th', th.shape)
-        print('r ',r.shape)
-        print('particles ',p)
-        print("particles_shape ", p.shape)
-        m = np.matmul(p,r)
-        self.odom_adjust2 = np.zeros((200,3))
-        for i in range(200):
-            self.odom_adjust2[i,:] = m[:,i,i]
+        
+        #print('th', th.shape)
+        #print('r ',r.shape)
+        #print('particles ',p)
+        #print("particles_shape ", p.shape)
+        #m = np.matmul(p,r)
+        #self.odom_adjust2 = np.zeros((200,3))
+        #for i in range(200):
+        #    self.odom_adjust2[i,:] = m[:,i,i]
             
-        print(self.odom_adjust2.shape)
+        #print(self.odom_adjust2.shape)
         
         print('with for loop')
         print(self.odom_adjust)
@@ -78,6 +87,13 @@ class MotionModel:
         self.odom_adjust[:, 1] += np.random.randn(N)*self.std_dev*delta_t
         #return updated particles
         return particles + self.odom_adjust
+    
+    def apply_odom2(self, th, o):
+        r = np.array([[np.cos(th), -np.sin(th), np.zeros(len(th))],
+                      [np.sin(th), np.cos(th), np.zeros(len(th))], 
+                      [np.zeros(len(th)),np.zeros(len(th)),1.0*np.ones(len(th))]])
+        return np.matmul(r, o)   
+        
 
     def apply_odom(self, theta, odom_data):
         rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
