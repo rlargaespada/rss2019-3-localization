@@ -6,8 +6,6 @@ import tf
 from tf.transformations import quaternion_from_euler
 from sensor_model import SensorModel
 from motion_model import MotionModel
-import tf2_ros
-import tf2_msgs.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, PointCloud
@@ -42,7 +40,6 @@ class ParticleFilter:
         self.sensor_std = rospy.get_param("~sensor_std") # standard deviation of simulated sensor noise
         self.motion_std = rospy.get_param("~motion_std") # standard deviation of motion model noise
         self.dt = rospy.get_param("~dt") # timestep over which to apply actuation (seconds)
-
         # Initialize the models
         self.motion_model = MotionModel(self.motion_std, self.dt, self.NUM_PARTICLES)
         self.sensor_model = SensorModel()
@@ -50,14 +47,14 @@ class ParticleFilter:
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
         self.current_pose = np.zeros((3, 1))
 
-        # Initialize the models
+        #Initialize drive model
         self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
 
         self.transform_stamped_msg = TransformStamped()
-        self.frame_transform_pub = rospy.Publisher("/tf", tf2_msgs.msg.TFMessage, queue_size=10)
-        self.br = tf.TransformBroadcaster()
+        self.frame_transform_pub = rospy.Publisher(self.AVG_POSE_TOPIC, TransformStamped, queue_size=10)
+
         #Initialize time tracker
         self.time_last = time.time()
 
@@ -92,6 +89,7 @@ class ParticleFilter:
             vel[2] = odometry.twist.twist.angular.z #d_theta
             #Get change in time
             time_change = time.time() - self.time_last
+            self.time_last = time.time()
             #update particles
             self.particles = self.motion_model.evaluate(self.particles, vel, time_change)
             #Average pose
@@ -187,15 +185,14 @@ class ParticleFilter:
 
         current_pose.scale.x = 0.2
         current_pose.scale.y = 0.4
+
         current_pose.color.a = 1.0
         current_pose.color.g = 1.0
 
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
-        # self.create_transform()
-        # self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self$
-        # tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
-        # self.frame_transform_pub.publish(tfm)
+        self.create_transform()
+        self.frame_transform_pub.publish(self.transform_stamped_msg)
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
@@ -209,7 +206,7 @@ class ParticleFilter:
     def create_transform(self):
         header = Header()
         header.stamp = rospy.rostime.Time.now()
-        header.frame_id = self.AVG_POSE_TOPIC
+        header.frame_id = "/map"
         transform = Transform()
         vec = Vector3()
         vec.x = self.current_pose[0]
@@ -224,13 +221,15 @@ class ParticleFilter:
         transform.translation = vec
         transform.rotation = quat
         self.transform_stamped_msg.header = header
-        self.transform_stamped_msg.child_frame_id = "/map"
+        self.transform_stamped_msg.child_frame_id = self.AVG_POSE_TOPIC
         self.transform_stamped_msg.transform = transform
+        
+
+
+
+
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
     pf = ParticleFilter()
     rospy.spin()
-
-
-

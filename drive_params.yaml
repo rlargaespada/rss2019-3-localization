@@ -1,5 +1,5 @@
-#topics
-odom_topic: "/odom"
+# topics
+odom_topic: "vesc/odom"
 scan_topic: "/scan"
 pose_topic: "/initialpose"
 drive_topic: "/drive"
