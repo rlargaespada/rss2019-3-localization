@@ -1,5 +1,5 @@
 # topics
-odom_topic: "vesc/odom"
+odom_topic: "/vesc/odom"
 scan_topic: "/scan"
 pose_topic: "/initialpose"
 drive_topic: "/drive"
@@ -17,8 +17,8 @@ dt: 0.02 # timestep over which to apply actuation (seconds)
 # each particle. This doesn't need to be
 # equal to the actual number (>1000)
 # so long as you downsample properly
-num_beams_per_particle: 100
-take_nth_beams: 4
+num_beams_per_particle: 1081
+take_nth_beams: 47
 
 
 # The field of view centered around theta=0
@@ -33,7 +33,7 @@ lookup_grain: .01
 # The names of topics to listen and publish to
 map_topic: "/map"
 scan_topic: "/scan"
-odom_topic: "/odom"
+odom_topic: "/vesc/odom"
 
 # The frame you should publish your transform to.
 particle_filter_frame: "/base_link_pf"

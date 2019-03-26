@@ -6,6 +6,8 @@ import tf
 from tf.transformations import quaternion_from_euler
 from sensor_model import SensorModel
 from motion_model import MotionModel
+import tf2_ros
+import tf2_msgs.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, PointCloud
@@ -53,8 +55,8 @@ class ParticleFilter:
         self.create_ackermann()
 
         self.transform_stamped_msg = TransformStamped()
-        self.frame_transform_pub = rospy.Publisher(self.AVG_POSE_TOPIC, TransformStamped, queue_size=10)
-
+        self.frame_transform_pub = rospy.Publisher("/tf", tf2_msgs.msg.TFMessage, queue_size=10)
+	self.br = tf.TransformBroadcaster()
         #Initialize time tracker
         self.time_last = time.time()
 
@@ -192,7 +194,9 @@ class ParticleFilter:
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
         self.create_transform()
-        self.frame_transform_pub.publish(self.transform_stamped_msg)
+        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/map", "/base_link")
+        tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
+        self.frame_transform_pub.publish(tfm)
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
@@ -206,7 +210,7 @@ class ParticleFilter:
     def create_transform(self):
         header = Header()
         header.stamp = rospy.rostime.Time.now()
-        header.frame_id = "/map"
+        header.frame_id = self.AVG_POSE_TOPIC
         transform = Transform()
         vec = Vector3()
         vec.x = self.current_pose[0]
@@ -221,10 +225,9 @@ class ParticleFilter:
         transform.translation = vec
         transform.rotation = quat
         self.transform_stamped_msg.header = header
-        self.transform_stamped_msg.child_frame_id = self.AVG_POSE_TOPIC
+        self.transform_stamped_msg.child_frame_id = "/map"
         self.transform_stamped_msg.transform = transform
         
-
 
 
 
