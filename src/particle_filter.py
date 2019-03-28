@@ -153,6 +153,32 @@ class ParticleFilter:
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
 
+    def multi_avg(self,vals):
+	'''
+	finds typical x value, robust to multi modal input
+	'''
+	x = np.array(vals)
+	x_new = x[::5] + x[1::5] + x[2::5] + x[3::5] + x[4::5]
+	xn = x_new.tolist()
+	max1 = max(xn)
+	m = max1
+	xn.remove(max1)
+	ms = [m]
+	while m>=.8*max1:
+		m = max(xn)
+		xn.remove(m)
+		ms.append(m)
+	xn = x_new.tolist()
+	if len(ms)>1:
+		if abs(xn.index(max1)-xn.index(m[1]))>4:
+			#dist is multi-modal
+			
+		else:
+			return np.average(vals)
+	else:
+		return np.average(vals)
+	
+	
     def create_PointCloud(self):
         '''
         Create and publish point cloud of particles and current pose marker
