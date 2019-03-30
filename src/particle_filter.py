@@ -18,6 +18,7 @@ from geometry_msgs.msg import Transform
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Quaternion
 from std_msgs.msg import Header
+from std_msgs.msg import Float32
 
 
 class ParticleFilter:
@@ -34,10 +35,14 @@ class ParticleFilter:
         self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
         self.NUM_PARTICLES = rospy.get_param("~num_particles")
         self.DRIVE_TOPIC = rospy.get_param("~drive_topic")
+        self.ERROR_TOPIC_X = "/drive_error_x"
+        self.ERROR_TOPIC_Y = "/drive_error_y"
+        self.ERROR_TOPIC_TH = "/drive_error_th"
+        
 
         # Set size of partcles
         self.particles = np.zeros((self.NUM_PARTICLES, 3))
-
+        self.odom_pose = np.zeros(3)
         # Get model parameters
         self.sensor_std = rospy.get_param("~sensor_std") # standard deviation of simulated sensor noise
         self.motion_std = rospy.get_param("~motion_std") # standard deviation of motion model noise
@@ -54,9 +59,15 @@ class ParticleFilter:
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
 
+        #Initialize Error Publisher
+        self.error_pub_x = rospy.Publisher(self.ERROR_TOPIC_X, Float32, queue_size=10)
+        self.error_pub_y = rospy.Publisher(self.ERROR_TOPIC_Y, Float32, queue_size=10)
+        self.error_pub_th = rospy.Publisher(self.ERROR_TOPIC_TH, Float32, queue_size=10)
+
+        #Initialize map frame transforms
         self.transform_stamped_msg = TransformStamped()
         self.frame_transform_pub = rospy.Publisher("/tf", tf2_msgs.msg.TFMessage, queue_size=10)
-	self.br = tf.TransformBroadcaster()
+        self.br = tf.TransformBroadcaster()
         #Initialize time tracker
         self.time_last = time.time()
 
@@ -89,6 +100,10 @@ class ParticleFilter:
             vel[0] = odometry.twist.twist.linear.x  #d_x
             vel[1] = odometry.twist.twist.linear.y  #d_y
             vel[2] = odometry.twist.twist.angular.z #d_theta
+            #get position from odometry
+            self.odom_pose[0] = odometry.pose.pose.position.x
+            self.odom_pose[1] = odometry.pose.pose.position.y
+            self.odom_pose[2] = 2*np.arctan(odometry.pose.pose.orientation.z/odometry.pose.pose.orientation.w)
             #Get change in time
             time_change = time.time() - self.time_last
             self.time_last = time.time()
@@ -144,41 +159,43 @@ class ParticleFilter:
         '''
         Gets the average pose from all the particles, saves to self and publishes.
         '''
-        x_avg = np.average(self.particles[:,0])
-        y_avg = np.average(self.particles[:,1])
         theta_avg = np.arctan2(np.average(np.sin(self.particles[:, 2])), np.average(np.cos(self.particles[:, 2])))
+        x_avg = np.average(self.particles[:,0]) - .2*np.cos(theta_avg) #Convert to base_link
+        y_avg = np.average(self.particles[:,1]) - .2*np.sin(theta_avg) #Convert to base_link
         avg = np.array([x_avg, y_avg, theta_avg])
-
+        self.error_pub_x.publish(x_avg - self.odom_pose[0])
+        self.error_pub_y.publish(y_avg - self.odom_pose[1])
+        self.error_pub_th.publish(theta_avg - self.odom_pose[2])
         #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
 
     def multi_avg(self,vals):
-	'''
-	finds typical x value, robust to multi modal input
-	'''
-	x = np.array(vals)
-	x_new = x[::5] + x[1::5] + x[2::5] + x[3::5] + x[4::5]
-	xn = x_new.tolist()
-	max1 = max(xn)
-	m = max1
-	xn.remove(max1)
-	ms = [m]
-	while m>=.8*max1:
-		m = max(xn)
-		xn.remove(m)
-		ms.append(m)
-	xn = x_new.tolist()
-	if len(ms)>1:
-		if abs(xn.index(max1)-xn.index(m[1]))>4:
-			#dist is multi-modal
-			
-		else:
-			return np.average(vals)
-	else:
-		return np.average(vals)
-	
-	
+        '''
+        finds typical x value, robust to multi modal input
+        '''
+        x = np.array(vals)
+        x_new = x[::5] + x[1::5] + x[2::5] + x[3::5] + x[4::5]
+        xn = x_new.tolist()
+        max1 = max(xn)
+        m = max1
+        xn.remove(max1)
+        ms = [m]
+        while m>=.8*max1:
+            m = max(xn)
+            xn.remove(m)
+            ms.append(m)
+        xn = x_new.tolist()
+        if len(ms)>1:
+            if abs(xn.index(max1)-xn.index(m[1]))>4:
+                #dist is multi-modal
+                True
+            else:
+                return np.average(vals)
+        else:
+            return np.average(vals)
+
+
     def create_PointCloud(self):
         '''
         Create and publish point cloud of particles and current pose marker

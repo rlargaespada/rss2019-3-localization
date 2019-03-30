@@ -17,10 +17,11 @@ class SensorModel:
         self.num_beams_per_particle = rospy.get_param("~num_beams_per_particle")/self.take_nth_beam
         self.scan_theta_discretization = rospy.get_param("~scan_theta_discretization")
         self.scan_field_of_view = rospy.get_param("~scan_field_of_view")
+        self.scan_dist = rospy.get_param("~scan_dist")
         #meters/measurement in lookup table 
         self.grain = rospy.get_param("~lookup_grain")
         #Get lookup table: Values listed as (a_hit, a_short, a_max, a_rand, sigma, max_range, dz)
-        self.prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, .5, 30, self.grain)
+        self.prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, .5, self.scan_dist, self.grain)
         ####################################
         # TODO
         # Precompute the sensor model here
@@ -78,7 +79,7 @@ class SensorModel:
         # This produces a matrix of size N x num_beams_per_particle 
         scans = self.scan_sim.scan(particles)
         #Bound the distance of a scan to 9.9
-        scans = np.clip(scans, 0, 29.9)
+        scans = np.clip(scans, 0, self.scan_dist - self.grain)
         #Return probabilities
         return self.scans_to_probs(scans, observations, self.grain)
         ####################################
@@ -117,7 +118,7 @@ class SensorModel:
         take in scans, observations, and grain
         '''
         observations = np.array(laser_scan.ranges)[::self.take_nth_beam]
-        observations = np.clip(observations, 0, 29.9)
+        observations = np.clip(observations, 0, self.scan_dist - self.grain)
         if observations.shape[0] != scans.shape[1]:
             print("WARNING: observations and ray cast sizes different")
         #Initialize a matrix of probabilities associated with each ray
