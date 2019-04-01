@@ -22,6 +22,7 @@ class SensorModel:
         self.sensor_std = rospy.get_param("~sensor_std")
         # Get lookup table: Values listed as (a_hit, a_short, a_max, a_rand, sigma, max_range, dz)
         self.prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, self.sensor_std, self.scan_dist, self.grain)
+        #np.genfromtxt("SensorTable.csv", delimiter=',')
 
         # Create a simulated laser scan
         self.scan_sim = PyScanSimulator2D(
