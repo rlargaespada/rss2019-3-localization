@@ -38,7 +38,7 @@ class ParticleFilter:
         self.ERROR_TOPIC_X = "/drive_error_x"
         self.ERROR_TOPIC_Y = "/drive_error_y"
         self.ERROR_TOPIC_TH = "/drive_error_th"
-        
+
 
         # Set size of partcles
         self.particles = np.zeros((self.NUM_PARTICLES, 3))
@@ -270,10 +270,6 @@ class ParticleFilter:
         self.transform_stamped_msg.header = header
         self.transform_stamped_msg.child_frame_id = "/map"
         self.transform_stamped_msg.transform = transform
-        
-
-
-
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
