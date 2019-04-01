@@ -16,8 +16,8 @@ def talker():
     header.stamp = rospy.rostime.Time.now()
     header.frame_id = "/map"
     point = Point()
-    point.x = -27
-    point.y = -.5
+    point.x = -24
+    point.y = -2.5
     point.z = 0
     orient = Quaternion()
     orient.x = 0

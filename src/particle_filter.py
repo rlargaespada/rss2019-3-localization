@@ -237,9 +237,10 @@ class ParticleFilter:
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
         self.create_transform()
-        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/map", "/base_link")
-        tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
-        self.frame_transform_pub.publish(tfm)
+        #print("HERE", self.current_pose)
+        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
+        #tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
+        #self.frame_transform_pub.publish(tfm)
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
