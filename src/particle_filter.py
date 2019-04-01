@@ -130,7 +130,7 @@ class ParticleFilter:
             #Get indexes for the particles based on probability distribution
             particle_index = np.random.choice(self.particles.shape[0], self.particles.shape[0], replace=True, p=probs_for_particles)
             #Get particles corrosponding to the indexes chosen
-            self.particles = np.array([self.particles[i, :] for i in particle_index])
+            self.particles = self.particles[particle_index]
             #Create point cloud for the particles
             self.current_pose = self.get_avg_pose()
             print(self.current_pose)

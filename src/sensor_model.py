@@ -119,20 +119,29 @@ class SensorModel:
         '''
         observations = np.array(laser_scan.ranges)[::self.take_nth_beam]
         observations = np.clip(observations, 0, self.scan_dist - self.grain)
-        if observations.shape[0] != scans.shape[1]:
-            print("WARNING: observations and ray cast sizes different")
-        #Initialize a matrix of probabilities associated with each ray
-        probs = np.zeros((scans.shape[0], scans.shape[1]))
-        #Iterate through each beam on a scan
-        for beam in xrange(scans.shape[1]):
-            #set the ground based measurement for each beam
-            measurement = int(observations[beam]/grain)
-            #Iterate through each particle
-            for particle in xrange(scans.shape[0]):
-                #Get the corrosponding measurement/scan probability from lookup table
-                ray_cast = int(scans[particle, beam]/grain)
-                # print(particle, ray_cast, measurement)
-                probs[particle, beam] = self.prob_lookup.probs[measurement, ray_cast]
+        observations = observations/self.grain
+        observations = observations.astype(int)
+
+        scans = scans/self.grain
+        scans = scans.astype(int)
+
+        # if observations.shape[0] != scans.shape[1]:
+        #     print("WARNING: observations and ray cast sizes different")
+        # # Initialize a matrix of probabilities associated with each ray
+        # probs = np.zeros((scans.shape[0], scans.shape[1]))
+        # #Iterate through each beam on a scan
+        # for beam in xrange(scans.shape[1]):
+        #     #set the ground based measurement for each beam
+        #     measurement = observations[beam]
+        #     #Iterate through each particle
+        #     for particle in xrange(scans.shape[0]):
+        #         #Get the corrosponding measurement/scan probability from lookup table
+        #         ray_cast = scans[particle, beam]
+        #         # print(particle, ray_cast, measurement)
+        #         probs[particle, beam] = self.prob_lookup.probs[measurement, ray_cast]
+
+        obs_extended = np.tile(observations, (scans.shape[0], 1))
+        probs = self.prob_lookup.probs[obs_extended, scans]
 
         #Find the overall probability of each scan by averaging each ray probability
         probs_mean = np.mean(probs, axis=1)

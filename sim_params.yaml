@@ -8,7 +8,7 @@ particle_topic: "/particle_cloud"
 vis_topic: "visualization_marker"
 
 # particle filter params
-num_particles: 200
+num_particles: 500
 motion_std: 0.5 # std of motion model noise (meters)
 sensor_std: 0.5 # std of sensor model noise (meters)
 dt: 0.02 # timestep over which to apply actuation (seconds)
