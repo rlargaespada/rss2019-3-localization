@@ -237,9 +237,7 @@ class ParticleFilter:
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
         self.create_transform()
-        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/map", "/base_link")
-        tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
-        self.frame_transform_pub.publish(tfm)
+        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
@@ -253,7 +251,7 @@ class ParticleFilter:
     def create_transform(self):
         header = Header()
         header.stamp = rospy.rostime.Time.now()
-        header.frame_id = self.AVG_POSE_TOPIC
+        header.frame_id = "/map"
         transform = Transform()
         vec = Vector3()
         vec.x = self.current_pose[0]
@@ -268,7 +266,7 @@ class ParticleFilter:
         transform.translation = vec
         transform.rotation = quat
         self.transform_stamped_msg.header = header
-        self.transform_stamped_msg.child_frame_id = "/map"
+        #self.transform_stamped_msg.child_frame_id = "/map"
         self.transform_stamped_msg.transform = transform
         
 

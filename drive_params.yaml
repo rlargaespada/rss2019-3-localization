@@ -28,8 +28,8 @@ scan_field_of_view: 4.71 # radians
 scan_theta_discretization: 500
 
 # Grain of lookup talbe (meters per cell)
-lookup_grain: .02
-scan_dist: 60
+lookup_grain: .05
+scan_dist: 10
 
 # The names of topics to listen and publish to
 map_topic: "/map"
