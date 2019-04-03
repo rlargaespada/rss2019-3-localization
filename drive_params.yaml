@@ -1,5 +1,6 @@
 # debugging flag
 debug: False
+sim: False
 
 # topics
 odom_topic: "/vesc/odom"

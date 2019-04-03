@@ -1,5 +1,6 @@
 # debugging flag
 debug: True
+sim: True
 
 # topics
 odom_topic: "/odom"

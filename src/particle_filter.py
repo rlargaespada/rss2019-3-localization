@@ -25,6 +25,7 @@ class ParticleFilter:
 
     def __init__(self):
         self.debug = rospy.get_param("~debug")
+        self.sim = rospy.get_param("~sim")
 
         # Get parameters
         self.particle_filter_frame = rospy.get_param("~particle_filter_frame")
@@ -205,7 +206,6 @@ class ParticleFilter:
         else:
             return np.average(vals)
 
-    
     def draw_path(self, wanted_pose):
         '''
         creates a path for drawing in rviz
@@ -276,8 +276,9 @@ class ParticleFilter:
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
 
-        quat = quaternion_from_euler(0, 0, self.current_pose[2])
-        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (quat[0], quat[1], quat[2], quat[3]), rospy.Time.now(), "/base_link", "/map")
+        if not self.sim:
+            quat = quaternion_from_euler(0, 0, self.current_pose[2])
+            self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (quat[0], quat[1], quat[2], quat[3]), rospy.Time.now(), "/base_link", "/map")
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
