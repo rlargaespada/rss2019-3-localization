@@ -1,3 +1,6 @@
+# debugging flag
+debug: True
+
 # topics
 odom_topic: "/odom"
 scan_topic: "/scan"
