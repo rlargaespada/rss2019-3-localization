@@ -5,6 +5,7 @@ import rospy
 import tf
 from nav_msgs.msg import OccupancyGrid
 from tf.transformations import quaternion_from_euler
+from pathlib import Path
 
 class SensorModel:
 
@@ -125,10 +126,12 @@ class SensorModel:
         return probs_mean/probs_sum
 
     def make_table(self):
-        last_params = np.genfromtxt('lastparams.csv', delimiter=',')
+        dir_path = Path(__file__).parent
+
+        last_params = np.genfromtxt(str(dir_path) + '/lastparams.csv', delimiter=',')
         if np.allclose(self.params, last_params):
-            self.prob_lookup = np.genfromtxt('SensorTable.csv', delimiter=',')
+            self.prob_lookup = np.genfromtxt(str(dir_path) + '/SensorTable.csv', delimiter=',')
         else:
             np.savetxt('lastparams.csv', self.params, delimiter=',')
-            self.prob_lookup = sensor_lookup.SensorTable(self.params[0], self.params[1], self.params[2], self.params[3], 
+            self.prob_lookup = sensor_lookup.SensorTable(self.params[0], self.params[1], self.params[2], self.params[3],
             self.params[4], self.params[5], self.params[6])
