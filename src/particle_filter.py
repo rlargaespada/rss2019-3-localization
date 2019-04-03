@@ -40,6 +40,7 @@ class ParticleFilter:
 
         self.ERROR_TOPIC = "/localize_error"
         self.PATH_TOPIC = "/path"
+        self.PATH_TOPIC_ODOM = "/path_odom"
 
         # Set size of partcles
         self.particles = np.zeros((self.NUM_PARTICLES, 3))
@@ -55,6 +56,7 @@ class ParticleFilter:
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
         self.current_pose = np.zeros((3, 1))
         self.path = Path()
+        self.path_odom = Path()
 
         #Initialize drive model
         self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
@@ -66,6 +68,7 @@ class ParticleFilter:
             self.error_msg = Point32()
 
         self.path_pub = rospy.Publisher(self.PATH_TOPIC, Path, queue_size=10)
+        self.path_odom_pub = rospy.Publisher(self.PATH_TOPIC_ODOM, Path, queue_size=10)
 
         #Initialize map frame transforms
         self.transform_stamped_msg = TransformStamped()
@@ -117,7 +120,8 @@ class ParticleFilter:
             #Show particles via rviz
             self.create_PointCloud()
             #Draw Path
-            self.draw_path(self.current_pose)
+            self.draw_path(self.current_pose, self.path, self.path_pub)
+            self.draw_path(self.odom_pose, self.path_odom, self.path_odom_pub)
             #publish ackermann message
             self.steer_pub.publish(self.drive_msg)
             self.in_motion = False
@@ -206,7 +210,7 @@ class ParticleFilter:
         else:
             return np.average(vals)
 
-    def draw_path(self, wanted_pose):
+    def draw_path(self, wanted_pose, path, pub):
         '''
         creates a path for drawing in rviz
         wanted_pose in [x, y, theta]
@@ -230,9 +234,9 @@ class ParticleFilter:
         pose_stamp = PoseStamped()
         pose_stamp.pose = pose
         pose_stamp.header = header
-        self.path.poses.append(pose_stamp)
-        self.path.header = pose_stamp.header
-        self.path_pub.publish(self.path)
+        path.poses.append(pose_stamp)
+        path.header = pose_stamp.header
+        pub.publish(path)
 
 
     def create_PointCloud(self):
