@@ -60,8 +60,6 @@ class ParticleFilter:
         if self.debug:
             self.error_pub = rospy.Publisher(self.ERROR_TOPIC, Point32, queue_size=10)
             self.error_msg = Point32()
-            self.error_f = "sim_convergence_error"
-            self.error_write = Convergence(self.error_f)
 
         #Initialize map frame transforms
         self.transform_stamped_msg = TransformStamped()
@@ -170,7 +168,7 @@ class ParticleFilter:
 
         if self.debug:
             self.error_pub.publish(self.error_msg)
-            
+
         #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
