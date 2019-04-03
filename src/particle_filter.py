@@ -24,6 +24,7 @@ from std_msgs.msg import Float32
 class ParticleFilter:
 
     def __init__(self):
+        self.debug = rospy.get_param("~debug")
 
         # Get parameters
         self.particle_filter_frame = rospy.get_param("~particle_filter_frame")
@@ -35,10 +36,7 @@ class ParticleFilter:
         self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
         self.NUM_PARTICLES = rospy.get_param("~num_particles")
         self.DRIVE_TOPIC = rospy.get_param("~drive_topic")
-        self.ERROR_TOPIC_X = "/drive_error_x"
-        self.ERROR_TOPIC_Y = "/drive_error_y"
-        self.ERROR_TOPIC_TH = "/drive_error_th"
-
+        self.ERROR_TOPIC = "/localize_error"
 
         # Set size of partcles
         self.particles = np.zeros((self.NUM_PARTICLES, 3))
@@ -59,10 +57,11 @@ class ParticleFilter:
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
 
-        #Initialize Error Publisher
-        self.error_pub_x = rospy.Publisher(self.ERROR_TOPIC_X, Float32, queue_size=10)
-        self.error_pub_y = rospy.Publisher(self.ERROR_TOPIC_Y, Float32, queue_size=10)
-        self.error_pub_th = rospy.Publisher(self.ERROR_TOPIC_TH, Float32, queue_size=10)
+        if self.debug:
+            self.error_pub = rospy.Publisher(self.ERROR_TOPIC, Point32, queue_size=10)
+            self.error_msg = Point32()
+            self.error_f = "sim_convergence_error"
+            self.error_write = Convergence(self.error_f)
 
         #Initialize map frame transforms
         self.transform_stamped_msg = TransformStamped()
@@ -163,9 +162,15 @@ class ParticleFilter:
         x_avg = np.average(self.particles[:,0]) - .2*np.cos(theta_avg) #Convert to base_link
         y_avg = np.average(self.particles[:,1]) - .2*np.sin(theta_avg) #Convert to base_link
         avg = np.array([x_avg, y_avg, theta_avg])
-        self.error_pub_x.publish(x_avg - self.odom_pose[0])
-        self.error_pub_y.publish(y_avg - self.odom_pose[1])
-        self.error_pub_th.publish(theta_avg - self.odom_pose[2])
+        err = avg - self.odom_pose
+
+        self.error_msg.x = err[0]
+        self.error_msg.y = err[1]
+        self.error_msg.z = err[2]
+
+        if self.debug:
+            self.error_pub.publish(self.error_msg)
+            
         #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
