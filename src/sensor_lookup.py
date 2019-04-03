@@ -65,6 +65,7 @@ class SensorTable:
         # print(self.probs[700, 0])
         self.p_rand()
         # print(self.probs[700, 0])
+        np.savetxt("SensorTable.csv", self.probs, delimiter=",")
 
     def plot3d(self):
         fig = plt.figure()
@@ -89,11 +90,26 @@ class SensorTable:
         plt.plot(self.probs[700,:])
         plt.show()
 
-# table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
-# np.savetxt("SensorTable.csv", table.probs, delimiter=",")
+#table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
+#np.savetxt("SensorTable.csv", table.probs, delimiter=",")
+# t = [.74, .07, .07, .12, .5, 10, .01]
+# n = np.array(t)
+# np.savetxt('lastparams.csv', n, delimiter=',')
+# a = np.genfromtxt('lastparams.csv', delimiter=',')
+# print(np.allclose(n, a))
+# f = open('lastparams.txt', 'r+')
+# f.write(str(t))
+# print(f.read())
+# f.close()
+
+# a = f.read()
+# print(str(t) == a)
+
+
+
 # print(table.probs[700, 800])
 # print(table.probs[700, 700])
 # c = np.genfromtxt('foo.csv', delimiter=',')
 # print(c[700, 800])
 # print(c[700, 700])
-#table.plot3d()
+# table.plot3d()
