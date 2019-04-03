@@ -63,9 +63,8 @@ class ParticleFilter:
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
 
-        if self.debug:
-            self.error_pub = rospy.Publisher(self.ERROR_TOPIC, Point32, queue_size=10)
-            self.error_msg = Point32()
+        self.error_pub = rospy.Publisher(self.ERROR_TOPIC, Point32, queue_size=10)
+        self.error_msg = Point32()
 
         self.path_pub = rospy.Publisher(self.PATH_TOPIC, Path, queue_size=10)
         self.path_odom_pub = rospy.Publisher(self.PATH_TOPIC_ODOM, Path, queue_size=10)
