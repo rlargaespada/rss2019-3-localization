@@ -8,8 +8,8 @@ from sensor_model import SensorModel
 from motion_model import MotionModel
 import tf2_ros
 import tf2_msgs.msg
-from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point, PoseStamped, Pose
+from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import LaserScan, PointCloud
 from visualization_msgs.msg import Marker
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -24,6 +24,7 @@ from std_msgs.msg import Float32
 class ParticleFilter:
 
     def __init__(self):
+        self.debug = rospy.get_param("~debug")
 
         # Get parameters
         self.particle_filter_frame = rospy.get_param("~particle_filter_frame")
@@ -35,10 +36,9 @@ class ParticleFilter:
         self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
         self.NUM_PARTICLES = rospy.get_param("~num_particles")
         self.DRIVE_TOPIC = rospy.get_param("~drive_topic")
-        self.ERROR_TOPIC_X = "/drive_error_x"
-        self.ERROR_TOPIC_Y = "/drive_error_y"
-        self.ERROR_TOPIC_TH = "/drive_error_th"
-        
+
+        self.ERROR_TOPIC = "/localize_error"
+        self.PATH_TOPIC = "/path"
 
         # Set size of partcles
         self.particles = np.zeros((self.NUM_PARTICLES, 3))
@@ -53,16 +53,18 @@ class ParticleFilter:
         self.particle_cloud_publisher = rospy.Publisher(self.PARTICLE_CLOUD_TOPIC, PointCloud, queue_size=10)
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
         self.current_pose = np.zeros((3, 1))
+        self.path = Path()
 
         #Initialize drive model
         self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
 
-        #Initialize Error Publisher
-        self.error_pub_x = rospy.Publisher(self.ERROR_TOPIC_X, Float32, queue_size=10)
-        self.error_pub_y = rospy.Publisher(self.ERROR_TOPIC_Y, Float32, queue_size=10)
-        self.error_pub_th = rospy.Publisher(self.ERROR_TOPIC_TH, Float32, queue_size=10)
+        if self.debug:
+            self.error_pub = rospy.Publisher(self.ERROR_TOPIC, Point32, queue_size=10)
+            self.error_msg = Point32()
+
+        self.path_pub = rospy.Publisher(self.PATH_TOPIC, Path, queue_size=10)
 
         #Initialize map frame transforms
         self.transform_stamped_msg = TransformStamped()
@@ -113,6 +115,8 @@ class ParticleFilter:
             self.current_pose = self.get_avg_pose()
             #Show particles via rviz
             self.create_PointCloud()
+            #Draw Path
+            self.draw_path(self.current_pose)
             #publish ackermann message
             self.steer_pub.publish(self.drive_msg)
             self.in_motion = False
@@ -163,9 +167,15 @@ class ParticleFilter:
         x_avg = np.average(self.particles[:,0]) - .2*np.cos(theta_avg) #Convert to base_link
         y_avg = np.average(self.particles[:,1]) - .2*np.sin(theta_avg) #Convert to base_link
         avg = np.array([x_avg, y_avg, theta_avg])
-        self.error_pub_x.publish(x_avg - self.odom_pose[0])
-        self.error_pub_y.publish(y_avg - self.odom_pose[1])
-        self.error_pub_th.publish(theta_avg - self.odom_pose[2])
+        err = avg - self.odom_pose
+
+        self.error_msg.x = err[0]
+        self.error_msg.y = err[1]
+        self.error_msg.z = err[2]
+
+        if self.debug:
+            self.error_pub.publish(self.error_msg)
+
         #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
@@ -194,6 +204,35 @@ class ParticleFilter:
                 return np.average(vals)
         else:
             return np.average(vals)
+
+    
+    def draw_path(self, wanted_pose):
+        '''
+        creates a path for drawing in rviz
+        wanted_pose in [x, y, theta]
+        '''
+        header = Header()
+        header.stamp = rospy.rostime.Time.now()
+        header.frame_id = "/map"
+        point = Point()
+        point.x = wanted_pose[0]
+        point.y = wanted_pose[1]
+        point.z = 0
+        orient = Quaternion()
+        quat = quaternion_from_euler(0, 0, wanted_pose[2])
+        orient.x = quat[0]
+        orient.y = quat[1]
+        orient.z = quat[2]
+        orient.w = quat[3]
+        pose = Pose()
+        pose.position = point
+        pose.orientation = orient
+        pose_stamp = PoseStamped()
+        pose_stamp.pose = pose
+        pose_stamp.header = header
+        self.path.poses.append(pose_stamp)
+        self.path.header = pose_stamp.header
+        self.path_pub.publish(self.path)
 
 
     def create_PointCloud(self):
@@ -236,45 +275,39 @@ class ParticleFilter:
 
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
-        self.create_transform()
-        #print("HERE", self.current_pose)
-        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
-        #tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
-        #self.frame_transform_pub.publish(tfm)
+
+        quat = quaternion_from_euler(0, 0, self.current_pose[2])
+        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (quat[0], quat[1], quat[2], quat[3]), rospy.Time.now(), "/base_link", "/map")
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
         self.drive_msg.header.frame_id = "1"
-        self.drive_msg.drive.steering_angle = 0.
+        self.drive_msg.drive.steering_angle = 0.2
         self.drive_msg.drive.steering_angle_velocity = 0
         self.drive_msg.drive.speed = 1.
         self.drive_msg.drive.acceleration = 0
         self.drive_msg.drive.jerk = 0
 
-    def create_transform(self):
-        header = Header()
-        header.stamp = rospy.rostime.Time.now()
-        header.frame_id = self.AVG_POSE_TOPIC
-        transform = Transform()
-        vec = Vector3()
-        vec.x = self.current_pose[0]
-        vec.y = self.current_pose[1]
-        vec.z = 0
-        quat = Quaternion()
-        quaternion_from_current = quaternion_from_euler(0, 0, self.current_pose[2])
-        quat.x = quaternion_from_current[0]
-        quat.y = quaternion_from_current[1]
-        quat.z = quaternion_from_current[2]
-        quat.w = quaternion_from_current[3]
-        transform.translation = vec
-        transform.rotation = quat
-        self.transform_stamped_msg.header = header
-        self.transform_stamped_msg.child_frame_id = "/map"
-        self.transform_stamped_msg.transform = transform
-        
-
-
-
+    # def create_transform(self):
+    #     header = Header()
+    #     header.stamp = rospy.rostime.Time.now()
+    #     header.frame_id = "/map"
+    #     transform = Transform()
+    #     vec = Vector3()
+    #     vec.x = self.current_pose[0]
+    #     vec.y = self.current_pose[1]
+    #     vec.z = 0
+    #     quat = Quaternion()
+    #     quaternion_from_current = quaternion_from_euler(0, 0, self.current_pose[2])
+    #     quat.x = quaternion_from_current[0]
+    #     quat.y = quaternion_from_current[1]
+    #     quat.z = quaternion_from_current[2]
+    #     quat.w = quaternion_from_current[3]
+    #     transform.translation = vec
+    #     transform.rotation = quat
+    #     self.transform_stamped_msg.header = header
+    #     #self.transform_stamped_msg.child_frame_id = "/map"
+    #     self.transform_stamped_msg.transform = transform
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")

@@ -33,14 +33,14 @@ class SensorTable:
         #     new_row = self.a_hit *(np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(zt-z_map)**2/(2*self.sigma**2))
         #     self.probs[counter,:] += new_row
         #     counter += 1
-        for z_map in xrange(0, int(self.z_max/self.dz)):
-            for zt in xrange(0, int(self.z_max/self.dz)):
+        for z_map in range(0, int(self.z_max/self.dz)):
+            for zt in range(0, int(self.z_max/self.dz)):
                 self.probs[z_map, zt] += self.a_hit *(np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(self.dz*(zt-z_map))**2/(2*self.sigma**2))
         # self.normalize()
 
     def p_short(self):
-        for z_map in xrange(1, int(self.z_max/self.dz)):
-            for zt in xrange(0, int(self.z_max/self.dz)):
+        for z_map in range(1, int(self.z_max/self.dz)):
+            for zt in range(0, int(self.z_max/self.dz)):
                 if zt <= z_map:
                     self.probs[z_map, zt] += self.a_short * (2./(z_map*self.dz)) * (1 - zt*1./z_map)
                 else:
@@ -65,6 +65,7 @@ class SensorTable:
         # print(self.probs[700, 0])
         self.p_rand()
         # print(self.probs[700, 0])
+        np.savetxt("SensorTable.csv", self.probs, delimiter=",")
 
     def plot3d(self):
         fig = plt.figure()
@@ -89,7 +90,26 @@ class SensorTable:
         plt.plot(self.probs[700,:])
         plt.show()
 
-# table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
-# # print(table.probs[700, 800])
+#table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
+#np.savetxt("SensorTable.csv", table.probs, delimiter=",")
+# t = [.74, .07, .07, .12, .5, 10, .01]
+# n = np.array(t)
+# np.savetxt('lastparams.csv', n, delimiter=',')
+# a = np.genfromtxt('lastparams.csv', delimiter=',')
+# print(np.allclose(n, a))
+# f = open('lastparams.txt', 'r+')
+# f.write(str(t))
+# print(f.read())
+# f.close()
+
+# a = f.read()
+# print(str(t) == a)
+
+
+
+# print(table.probs[700, 800])
 # print(table.probs[700, 700])
+# c = np.genfromtxt('foo.csv', delimiter=',')
+# print(c[700, 800])
+# print(c[700, 700])
 # table.plot3d()
