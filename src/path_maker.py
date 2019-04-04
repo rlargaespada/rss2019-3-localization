@@ -57,6 +57,8 @@ class PathMaker:
         position[0] = pose.position.x
         position[1] = pose.position.y
         position[2] = 2*np.arctan(pose.orientation.z/pose.orientation.w)
+	if not self.sim:
+	    position += self.last_initial_pose
         self.draw_path(position, self.path_odom, self.path_odom_pub)
 
     def pose_path_callback(self, twist):
@@ -64,8 +66,6 @@ class PathMaker:
         position[0] = twist.linear.x
         position[1] = twist.linear.y
         position[2] = twist.angular.z
-        if not self.sim:
-            position += self.last_initial_pose
         self.draw_path(position, self.path, self.path_pub)
 
 

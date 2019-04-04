@@ -27,7 +27,7 @@ class ParticleFilter:
 
         # Get parameters
         self.debug = True
-        self.sim = True
+        self.sim = rospy.get_param("~sim")
         self.particle_filter_frame = rospy.get_param("~particle_filter_frame")
         self.ODOMETRY_TOPIC = rospy.get_param("~odom_topic")
         self.SCAN_TOPIC = rospy.get_param("~scan_topic")
