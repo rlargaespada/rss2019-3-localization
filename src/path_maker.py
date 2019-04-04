@@ -21,18 +21,18 @@ from std_msgs.msg import Header
 from std_msgs.msg import Float32
 
 
-class ParticleFilter:
+class PathMaker:
 
     def __init__(self):
 
         # Get parameters
-        self.sim = True
+        self.sim = rospy.get_param("~sim")
         self.PATH_TOPIC = "/path"
         self.PATH_TOPIC_ODOM = "/path_odom"
         self.ODOM_FOR_PATH = "/odom_for_path"
         self.POSE_FOR_PATH = "/pose_for_path"
-        self.POSE_TOPIC = "/initialpose"
-        
+        self.POSE_TOPIC = rospy.get_param("~pose_topic")
+
         self.path = Path()
         self.path_odom = Path()
         self.last_initial_pose = np.zeros(3)
@@ -99,5 +99,5 @@ class ParticleFilter:
 
 if __name__ == "__main__":
     rospy.init_node("path_maker")
-    pf = ParticleFilter()
+    pm = PathMaker()
     rospy.spin()

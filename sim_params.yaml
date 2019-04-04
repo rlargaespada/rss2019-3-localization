@@ -1,3 +1,6 @@
+# debugging flags
+sim: True
+
 # topics
 odom_topic: "/odom"
 scan_topic: "/scan"
