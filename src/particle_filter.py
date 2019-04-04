@@ -133,7 +133,7 @@ class ParticleFilter:
             self.particles = self.particles[particle_index]
             #Create point cloud for the particles
             self.current_pose = self.get_avg_pose()
-            print(self.current_pose)
+            # print(self.current_pose)
             self.create_PointCloud()
 
             self.in_scan = False
@@ -150,8 +150,9 @@ class ParticleFilter:
         N = len(self.particles)
         self.particles[:, 0] = x + np.random.randn(N)*self.sensor_std
         self.particles[:, 1] = y + np.random.randn(N)*self.sensor_std
-        self.particles[:, 2] = theta + np.random.randn(N)*self.sensor_std
-        self.particles[:, 2] %= 2* np.pi
+        # self.particles[:, 2] = theta + np.random.randn(N)*self.sensor_std
+        self.particles[:, 2] = np.random.uniform(0, 2*np.pi, N)
+	# self.particles[:, 2] %= 2* np.pi
         self.time_last = time.time()
         print(self.particles[1])
 
@@ -237,7 +238,7 @@ class ParticleFilter:
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
         self.create_transform()
-        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/map", "/base_link")
+        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
         tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
         self.frame_transform_pub.publish(tfm)
 
