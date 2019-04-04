@@ -65,6 +65,7 @@ class SensorTable:
         # print(self.probs[700, 0])
         self.p_rand()
         # print(self.probs[700, 0])
+	self.normalize()
 
     def plot3d(self):
         fig = plt.figure()
