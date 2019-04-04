@@ -8,8 +8,8 @@ from sensor_model import SensorModel
 from motion_model import MotionModel
 import tf2_ros
 import tf2_msgs.msg
-from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped, Point32, Point, PoseStamped, Pose, Twist, Vector3
+from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import LaserScan, PointCloud
 from visualization_msgs.msg import Marker
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -26,6 +26,8 @@ class ParticleFilter:
     def __init__(self):
 
         # Get parameters
+        self.debug = True
+        self.sim = True
         self.particle_filter_frame = rospy.get_param("~particle_filter_frame")
         self.ODOMETRY_TOPIC = rospy.get_param("~odom_topic")
         self.SCAN_TOPIC = rospy.get_param("~scan_topic")
@@ -35,9 +37,12 @@ class ParticleFilter:
         self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
         self.NUM_PARTICLES = rospy.get_param("~num_particles")
         self.DRIVE_TOPIC = rospy.get_param("~drive_topic")
-        self.ERROR_TOPIC_X = "/drive_error_x"
-        self.ERROR_TOPIC_Y = "/drive_error_y"
-        self.ERROR_TOPIC_TH = "/drive_error_th"
+
+        self.ERROR_TOPIC = "/localize_error"
+        self.PATH_TOPIC = "/path"
+        self.PATH_TOPIC_ODOM = "/path_odom"
+        self.ODOM_FOR_PATH = "/odom_for_path"
+        self.POSE_FOR_PATH = "/pose_for_path"
 
 
         # Set size of partcles
@@ -59,10 +64,18 @@ class ParticleFilter:
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
 
+        #Initialize variables for path
+        self.path = Path()
+        self.path_odom = Path()
+        self.path_pub = rospy.Publisher(self.PATH_TOPIC, Path, queue_size=10)
+        self.path_odom_pub = rospy.Publisher(self.PATH_TOPIC_ODOM, Path, queue_size=10)
+        self.pose_for_path_pub = rospy.Publisher(self.POSE_FOR_PATH, Twist, queue_size=10)
+        self.odom_for_path_pub = rospy.Publisher(self.ODOM_FOR_PATH, Pose, queue_size=10)
+
+
         #Initialize Error Publisher
-        self.error_pub_x = rospy.Publisher(self.ERROR_TOPIC_X, Float32, queue_size=10)
-        self.error_pub_y = rospy.Publisher(self.ERROR_TOPIC_Y, Float32, queue_size=10)
-        self.error_pub_th = rospy.Publisher(self.ERROR_TOPIC_TH, Float32, queue_size=10)
+        self.error_pub = rospy.Publisher(self.ERROR_TOPIC, Point32, queue_size=10)
+        self.error_msg = Point32()
 
         #Initialize map frame transforms
         self.transform_stamped_msg = TransformStamped()
@@ -83,6 +96,8 @@ class ParticleFilter:
         rospy.Subscriber(self.POSE_TOPIC, PoseWithCovarianceStamped, self.particle_setup)
         rospy.Subscriber(self.ODOMETRY_TOPIC, Odometry, self.odometry_callback)
         rospy.Subscriber(self.SCAN_TOPIC, LaserScan, self.scan_callback)
+        rospy.Subscriber(self.ODOM_FOR_PATH, Pose, self.odom_path_callback)
+        rospy.Subscriber(self.POSE_FOR_PATH, Twist, self.pose_path_callback)
 
         # timing gate
         self.in_scan = False # only allow motion to run when we are not processing scan data
@@ -113,7 +128,10 @@ class ParticleFilter:
             self.current_pose = self.get_avg_pose()
             #Show particles via rviz
             self.create_PointCloud()
-            #publish ackermann message
+            #Draw path
+            self.odom_for_path_pub.publish(odometry.pose.pose)
+            self.publish_current_pose()
+            # publish ackermann message
             self.steer_pub.publish(self.drive_msg)
             self.in_motion = False
 
@@ -152,8 +170,10 @@ class ParticleFilter:
         self.particles[:, 1] = y + np.random.randn(N)*self.sensor_std
         # self.particles[:, 2] = theta + np.random.randn(N)*self.sensor_std
         self.particles[:, 2] = np.random.uniform(0, 2*np.pi, N)
-	# self.particles[:, 2] %= 2* np.pi
+	    # self.particles[:, 2] %= 2* np.pi
         self.time_last = time.time()
+        self.path_odom = Path()
+        self.path = Path()
         print(self.particles[1])
 
     def get_avg_pose(self):
@@ -164,9 +184,14 @@ class ParticleFilter:
         x_avg = np.average(self.particles[:,0]) - .2*np.cos(theta_avg) #Convert to base_link
         y_avg = np.average(self.particles[:,1]) - .2*np.sin(theta_avg) #Convert to base_link
         avg = np.array([x_avg, y_avg, theta_avg])
-        self.error_pub_x.publish(x_avg - self.odom_pose[0])
-        self.error_pub_y.publish(y_avg - self.odom_pose[1])
-        self.error_pub_th.publish(theta_avg - self.odom_pose[2])
+        err = avg - self.odom_pose
+
+        self.error_msg.x = err[0]
+        self.error_msg.y = err[1]
+        self.error_msg.z = err[2]
+        
+        if self.debug:
+            self.error_pub.publish(self.error_msg)
         #how to handle multimodal avg?
         #Publish this pose as a transformation between the /map frame and a frame for the expected car's base link.
         return avg
@@ -237,10 +262,11 @@ class ParticleFilter:
 
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
-        self.create_transform()
-        self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
-        tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
-        self.frame_transform_pub.publish(tfm)
+        if not self.sim:
+            self.create_transform()
+            self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
+            tfm = tf2_msgs.msg.TFMessage([self.transform_stamped_msg])
+            self.frame_transform_pub.publish(tfm)
 
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
@@ -271,6 +297,62 @@ class ParticleFilter:
         self.transform_stamped_msg.header = header
         self.transform_stamped_msg.child_frame_id = "/map"
         self.transform_stamped_msg.transform = transform
+
+    def odom_path_callback(self, pose):
+        position = np.zeros(3)
+        position[0] = pose.position.x
+        position[1] = pose.position.y
+        position[2] = 2*np.arctan(pose.orientation.z/pose.orientation.w)
+        self.draw_path(position, self.path_odom, self.path_odom_pub)
+
+    def pose_path_callback(self, twist):
+        position = np.zeros(3)
+        position[0] = twist.linear.x
+        position[1] = twist.linear.y
+        position[2] = twist.angular.z
+        self.draw_path(position, self.path, self.path_pub)
+
+    def publish_current_pose(self):
+        twist = Twist()
+        twist.linear = Vector3()
+        twist.linear.x = self.current_pose[0]
+        twist.linear.y = self.current_pose[1]
+        twist.linear.z = 0
+        twist.angular = Vector3()
+        twist.angular.x = 0
+        twist.angular.y = 0
+        twist.angular.z = self.current_pose[2]
+        self.pose_for_path_pub.publish(twist)
+
+
+    def draw_path(self, wanted_pose, path, pub):
+        '''
+        creates a path for drawing in rviz
+        wanted_pose in [x, y, theta]
+        '''
+        header = Header()
+        header.stamp = rospy.rostime.Time.now()
+        header.frame_id = "/map"
+        point = Point()
+        point.x = wanted_pose[0]
+        point.y = wanted_pose[1]
+        point.z = 0
+        orient = Quaternion()
+        quat = quaternion_from_euler(0, 0, wanted_pose[2])
+        orient.x = quat[0]
+        orient.y = quat[1]
+        orient.z = quat[2]
+        orient.w = quat[3]
+        pose = Pose()
+        pose.position = point
+        pose.orientation = orient
+        pose_stamp = PoseStamped()
+        pose_stamp.pose = pose
+        pose_stamp.header = header
+        path.poses.append(pose_stamp)
+        path.header = pose_stamp.header
+        pub.publish(path)
+
 
 if __name__ == "__main__":
     rospy.init_node("particle_filter")
