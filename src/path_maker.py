@@ -26,20 +26,30 @@ class ParticleFilter:
     def __init__(self):
 
         # Get parameters
-
+        self.sim = True
         self.PATH_TOPIC = "/path"
         self.PATH_TOPIC_ODOM = "/path_odom"
         self.ODOM_FOR_PATH = "/odom_for_path"
         self.POSE_FOR_PATH = "/pose_for_path"
+        self.POSE_TOPIC = "/initialpose"
         
         self.path = Path()
         self.path_odom = Path()
+        self.last_initial_pose = np.zeros(3)
 
         self.path_pub = rospy.Publisher(self.PATH_TOPIC, Path, queue_size=10)
         self.path_odom_pub = rospy.Publisher(self.PATH_TOPIC_ODOM, Path, queue_size=10)
 
+        rospy.Subscriber(self.POSE_TOPIC, PoseWithCovarianceStamped, self.path_reset)
         rospy.Subscriber(self.ODOM_FOR_PATH, Pose, self.odom_path_callback)
         rospy.Subscriber(self.POSE_FOR_PATH, Twist, self.pose_path_callback)
+
+    def path_reset(self, position):
+        x, y = position.pose.pose.position.x, position.pose.pose.position.y
+        theta = 2*np.arctan(position.pose.pose.orientation.z/position.pose.pose.orientation.w)
+        self.last_initial_pose = np.array([x, y, theta])
+        self.path = Path()
+        self.path_odom = Path()
 
 
     def odom_path_callback(self, pose):
@@ -54,6 +64,8 @@ class ParticleFilter:
         position[0] = twist.linear.x
         position[1] = twist.linear.y
         position[2] = twist.angular.z
+        if not self.sim:
+            position += self.last_initial_pose
         self.draw_path(position, self.path, self.path_pub)
 
 

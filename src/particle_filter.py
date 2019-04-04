@@ -96,8 +96,8 @@ class ParticleFilter:
         rospy.Subscriber(self.POSE_TOPIC, PoseWithCovarianceStamped, self.particle_setup)
         rospy.Subscriber(self.ODOMETRY_TOPIC, Odometry, self.odometry_callback)
         rospy.Subscriber(self.SCAN_TOPIC, LaserScan, self.scan_callback)
-        rospy.Subscriber(self.ODOM_FOR_PATH, Pose, self.odom_path_callback)
-        rospy.Subscriber(self.POSE_FOR_PATH, Twist, self.pose_path_callback)
+        # rospy.Subscriber(self.ODOM_FOR_PATH, Pose, self.odom_path_callback)
+        # rospy.Subscriber(self.POSE_FOR_PATH, Twist, self.pose_path_callback)
 
         # timing gate
         self.in_scan = False # only allow motion to run when we are not processing scan data
@@ -298,19 +298,19 @@ class ParticleFilter:
         self.transform_stamped_msg.child_frame_id = "/map"
         self.transform_stamped_msg.transform = transform
 
-    def odom_path_callback(self, pose):
-        position = np.zeros(3)
-        position[0] = pose.position.x
-        position[1] = pose.position.y
-        position[2] = 2*np.arctan(pose.orientation.z/pose.orientation.w)
-        self.draw_path(position, self.path_odom, self.path_odom_pub)
+    # def odom_path_callback(self, pose):
+    #     position = np.zeros(3)
+    #     position[0] = pose.position.x
+    #     position[1] = pose.position.y
+    #     position[2] = 2*np.arctan(pose.orientation.z/pose.orientation.w)
+    #     self.draw_path(position, self.path_odom, self.path_odom_pub)
 
-    def pose_path_callback(self, twist):
-        position = np.zeros(3)
-        position[0] = twist.linear.x
-        position[1] = twist.linear.y
-        position[2] = twist.angular.z
-        self.draw_path(position, self.path, self.path_pub)
+    # def pose_path_callback(self, twist):
+    #     position = np.zeros(3)
+    #     position[0] = twist.linear.x
+    #     position[1] = twist.linear.y
+    #     position[2] = twist.angular.z
+    #     self.draw_path(position, self.path, self.path_pub)
 
     def publish_current_pose(self):
         twist = Twist()
@@ -325,33 +325,33 @@ class ParticleFilter:
         self.pose_for_path_pub.publish(twist)
 
 
-    def draw_path(self, wanted_pose, path, pub):
-        '''
-        creates a path for drawing in rviz
-        wanted_pose in [x, y, theta]
-        '''
-        header = Header()
-        header.stamp = rospy.rostime.Time.now()
-        header.frame_id = "/map"
-        point = Point()
-        point.x = wanted_pose[0]
-        point.y = wanted_pose[1]
-        point.z = 0
-        orient = Quaternion()
-        quat = quaternion_from_euler(0, 0, wanted_pose[2])
-        orient.x = quat[0]
-        orient.y = quat[1]
-        orient.z = quat[2]
-        orient.w = quat[3]
-        pose = Pose()
-        pose.position = point
-        pose.orientation = orient
-        pose_stamp = PoseStamped()
-        pose_stamp.pose = pose
-        pose_stamp.header = header
-        path.poses.append(pose_stamp)
-        path.header = pose_stamp.header
-        pub.publish(path)
+    # def draw_path(self, wanted_pose, path, pub):
+    #     '''
+    #     creates a path for drawing in rviz
+    #     wanted_pose in [x, y, theta]
+    #     '''
+    #     header = Header()
+    #     header.stamp = rospy.rostime.Time.now()
+    #     header.frame_id = "/map"
+    #     point = Point()
+    #     point.x = wanted_pose[0]
+    #     point.y = wanted_pose[1]
+    #     point.z = 0
+    #     orient = Quaternion()
+    #     quat = quaternion_from_euler(0, 0, wanted_pose[2])
+    #     orient.x = quat[0]
+    #     orient.y = quat[1]
+    #     orient.z = quat[2]
+    #     orient.w = quat[3]
+    #     pose = Pose()
+    #     pose.position = point
+    #     pose.orientation = orient
+    #     pose_stamp = PoseStamped()
+    #     pose_stamp.pose = pose
+    #     pose_stamp.header = header
+    #     path.poses.append(pose_stamp)
+    #     path.header = pose_stamp.header
+    #     pub.publish(path)
 
 
 if __name__ == "__main__":
