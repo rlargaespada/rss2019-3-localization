@@ -6,4 +6,9 @@
   <node pkg="localization" type="particle_filter.py" name="particle_filter" output="screen">
     <rosparam command="load" file="$(find localization)/sim_params.yaml"/>
   </node>
+
+  <!-- Begin path drawing -->
+  <node pkg="localization" type="path_maker.py" name="path_maker" output="screen">
+    <rosparam command="load" file="$(find localization)/sim_params.yaml"/>
+  </node>
 </launch>

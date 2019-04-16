@@ -1,4 +1,4 @@
-# debugging flag
+# Debugging flags
 debug: False
 sim: False
 
@@ -31,7 +31,7 @@ scan_field_of_view: 4.71 # radians
 # Discretize the theta space for faster ray tracing
 scan_theta_discretization: 500
 
-# Grain of lookup talbe (meters per cell)
+# Grain of lookup table (meters per cell)
 lookup_grain: .05
 scan_dist: 10
 

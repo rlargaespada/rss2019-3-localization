@@ -1,4 +1,4 @@
-# debugging flag
+# debugging flags
 debug: True
 sim: True
 

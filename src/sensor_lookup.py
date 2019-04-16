@@ -65,6 +65,8 @@ class SensorTable:
         # print(self.probs[700, 0])
         self.p_rand()
         # print(self.probs[700, 0])
+
+	      self.normalize()
         np.savetxt("SensorTable.csv", self.probs, delimiter=",")
 
     def plot3d(self):
@@ -79,37 +81,14 @@ class SensorTable:
 
         surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
-        ax.set_xlabel("Measured")
-        ax.set_ylabel("Ground Truth")
-        ax.set_zlabel("Probability")
-        ax.set_zlim(0, 0.8)
+	plt.title("Precomputed Sensor Model")
+        ax.set_xlabel("Measured (meters)")
+        ax.set_ylabel("Ground Truth (meters)")
+        ax.set_zlabel("Probability of Measurement|Ground Truth")
+        ax.set_zlim(0, 0.12)
 
         plt.show()
 
     def plot2d(self):
         plt.plot(self.probs[700,:])
         plt.show()
-
-#table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
-#np.savetxt("SensorTable.csv", table.probs, delimiter=",")
-# t = [.74, .07, .07, .12, .5, 10, .01]
-# n = np.array(t)
-# np.savetxt('lastparams.csv', n, delimiter=',')
-# a = np.genfromtxt('lastparams.csv', delimiter=',')
-# print(np.allclose(n, a))
-# f = open('lastparams.txt', 'r+')
-# f.write(str(t))
-# print(f.read())
-# f.close()
-
-# a = f.read()
-# print(str(t) == a)
-
-
-
-# print(table.probs[700, 800])
-# print(table.probs[700, 700])
-# c = np.genfromtxt('foo.csv', delimiter=',')
-# print(c[700, 800])
-# print(c[700, 700])
-# table.plot3d()
