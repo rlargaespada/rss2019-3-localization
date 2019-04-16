@@ -66,7 +66,7 @@ class SensorTable:
         self.p_rand()
         # print(self.probs[700, 0])
 
-	      self.normalize()
+        self.normalize()
         np.savetxt("SensorTable.csv", self.probs, delimiter=",")
 
     def plot3d(self):
@@ -81,7 +81,7 @@ class SensorTable:
 
         surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
-	plt.title("Precomputed Sensor Model")
+        plt.title("Precomputed Sensor Model")
         ax.set_xlabel("Measured (meters)")
         ax.set_ylabel("Ground Truth (meters)")
         ax.set_zlabel("Probability of Measurement|Ground Truth")

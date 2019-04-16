@@ -73,7 +73,7 @@ class ParticleFilter:
         self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
         self.drive_msg = AckermannDriveStamped()
         self.create_ackermann()
-        
+
         #Initialize variables for path
         self.path = Path()
         self.path_odom = Path()
@@ -143,7 +143,7 @@ class ParticleFilter:
             self.odom_for_path_pub.publish(odometry.pose.pose)
             self.publish_current_pose()
             # publish ackermann message
-        
+
             self.steer_pub.publish(self.drive_msg)
             self.in_motion = False
 
@@ -182,7 +182,7 @@ class ParticleFilter:
         self.particles[:, 1] = y + np.random.randn(N)*self.sensor_std
         # self.particles[:, 2] = theta + np.random.randn(N)*self.sensor_std
         self.particles[:, 2] = np.random.uniform(0, 2*np.pi, N)
-	    # self.particles[:, 2] %= 2* np.pi
+        # self.particles[:, 2] %= 2* np.pi
         self.time_last = time.time()
         self.path_odom = Path()
         self.path = Path()
