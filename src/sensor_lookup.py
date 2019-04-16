@@ -33,14 +33,14 @@ class SensorTable:
         #     new_row = self.a_hit *(np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(zt-z_map)**2/(2*self.sigma**2))
         #     self.probs[counter,:] += new_row
         #     counter += 1
-        for z_map in xrange(0, int(self.z_max/self.dz)):
-            for zt in xrange(0, int(self.z_max/self.dz)):
+        for z_map in range(0, int(self.z_max/self.dz)):
+            for zt in range(0, int(self.z_max/self.dz)):
                 self.probs[z_map, zt] += self.a_hit *(np.sqrt(2*np.pi*self.sigma**2))**-1 * np.exp(-(self.dz*(zt-z_map))**2/(2*self.sigma**2))
         # self.normalize()
 
     def p_short(self):
-        for z_map in xrange(1, int(self.z_max/self.dz)):
-            for zt in xrange(0, int(self.z_max/self.dz)):
+        for z_map in range(1, int(self.z_max/self.dz)):
+            for zt in range(0, int(self.z_max/self.dz)):
                 if zt <= z_map:
                     self.probs[z_map, zt] += self.a_short * (2./(z_map*self.dz)) * (1 - zt*1./z_map)
                 else:
@@ -65,7 +65,9 @@ class SensorTable:
         # print(self.probs[700, 0])
         self.p_rand()
         # print(self.probs[700, 0])
-	self.normalize()
+
+	      self.normalize()
+        np.savetxt("SensorTable.csv", self.probs, delimiter=",")
 
     def plot3d(self):
         fig = plt.figure()
@@ -90,8 +92,3 @@ class SensorTable:
     def plot2d(self):
         plt.plot(self.probs[700,:])
         plt.show()
-
-# table = SensorTable(.74, .07, .07, .12, .5, 10, .05)
-# # print(table.probs[700, 800])
-# print(table.probs[700, 700])
-# table.plot3d()

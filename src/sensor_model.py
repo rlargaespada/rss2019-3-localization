@@ -5,6 +5,7 @@ import rospy
 import tf
 from nav_msgs.msg import OccupancyGrid
 from tf.transformations import quaternion_from_euler
+from pathlib import Path
 
 class SensorModel:
 
@@ -21,7 +22,10 @@ class SensorModel:
         self.grain = rospy.get_param("~lookup_grain")
         self.sensor_std = rospy.get_param("~sensor_std")
         # Get lookup table: Values listed as (a_hit, a_short, a_max, a_rand, sigma, max_range, dz)
-        self.prob_lookup = sensor_lookup.SensorTable(.74, .07, .07, .12, self.sensor_std, self.scan_dist, self.grain)
+        self.params = np.array([.74, .07, .07, .12, self.sensor_std, self.scan_dist, self.grain])
+        self.prob_lookup = None
+        self.make_table()
+        #sensor_lookup.SensorTable(.74, .07, .07, .12, self.sensor_std, self.scan_dist, self.grain
 
         # Create a simulated laser scan
         self.scan_sim = PyScanSimulator2D(
@@ -120,3 +124,14 @@ class SensorModel:
         # Get normalization constant for distribution of probabilities across particles
         probs_sum = np.sum(probs_mean)
         return probs_mean/probs_sum
+
+    def make_table(self):
+        dir_path = Path(__file__).parent
+
+        last_params = np.genfromtxt(str(dir_path) + '/lastparams.csv', delimiter=',')
+        if np.allclose(self.params, last_params):
+            self.prob_lookup = np.genfromtxt(str(dir_path) + '/SensorTable.csv', delimiter=',')
+        else:
+            np.savetxt('lastparams.csv', self.params, delimiter=',')
+            self.prob_lookup = sensor_lookup.SensorTable(self.params[0], self.params[1], self.params[2], self.params[3],
+            self.params[4], self.params[5], self.params[6])

@@ -1,4 +1,5 @@
 # debugging flags
+debug: True
 sim: True
 
 # topics
