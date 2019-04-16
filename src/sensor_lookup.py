@@ -79,10 +79,11 @@ class SensorTable:
 
         surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
-        ax.set_xlabel("Measured")
-        ax.set_ylabel("Ground Truth")
-        ax.set_zlabel("Probability")
-        ax.set_zlim(0, 0.8)
+	plt.title("Precomputed Sensor Model")
+        ax.set_xlabel("Measured (meters)")
+        ax.set_ylabel("Ground Truth (meters)")
+        ax.set_zlabel("Probability of Measurement|Ground Truth")
+        ax.set_zlim(0, 0.12)
 
         plt.show()
 
@@ -90,7 +91,7 @@ class SensorTable:
         plt.plot(self.probs[700,:])
         plt.show()
 
-# table = SensorTable(.74, .07, .07, .12, .5, 10, .01)
+# table = SensorTable(.74, .07, .07, .12, .5, 10, .05)
 # # print(table.probs[700, 800])
 # print(table.probs[700, 700])
 # table.plot3d()

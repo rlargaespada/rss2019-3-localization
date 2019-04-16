@@ -37,6 +37,7 @@ class ParticleFilter:
         self.VISUALIZATION_TOPIC = rospy.get_param("~vis_topic")
         self.NUM_PARTICLES = rospy.get_param("~num_particles")
         self.DRIVE_TOPIC = rospy.get_param("~drive_topic")
+        self.POSE_ESTIM_TOPIC = "/estim_pose"
 
         self.ERROR_TOPIC = "/localize_error"
         self.PATH_TOPIC = "/path"
@@ -57,6 +58,7 @@ class ParticleFilter:
         self.sensor_model = SensorModel()
         self.particle_cloud_publisher = rospy.Publisher(self.PARTICLE_CLOUD_TOPIC, PointCloud, queue_size=10)
         self.current_pose_publisher = rospy.Publisher(self.VISUALIZATION_TOPIC, Marker, queue_size=10)
+        self.estim_pub = rospy.Publisher(self.POSE_ESTIM_TOPIC, Point32, queue_size=10)
         self.current_pose = np.zeros((3, 1))
 
         #Initialize drive model
@@ -189,7 +191,7 @@ class ParticleFilter:
         self.error_msg.x = err[0]
         self.error_msg.y = err[1]
         self.error_msg.z = err[2]
-        
+
         if self.debug:
             self.error_pub.publish(self.error_msg)
         #how to handle multimodal avg?
@@ -260,8 +262,15 @@ class ParticleFilter:
         current_pose.color.a = 1.0
         current_pose.color.g = 1.0
 
+        current_point = Point32()
+        current_point.x = current_pose.points[0].x
+        current_point.y = current_pose.points[0].y
+        current_point.z = np.arctan2(current_pose.points[1].y, current_pose.points[1].x)
+
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
+
+        self.estim_pub.publish(current_point)
         if not self.sim:
             self.create_transform()
             self.br.sendTransform((self.current_pose[0], self.current_pose[1], 0), (self.transform_stamped_msg.transform.rotation.x, self.transform_stamped_msg.transform.rotation.y, self.transform_stamped_msg.transform.rotation.z, self.transform_stamped_msg.transform.rotation.w), rospy.Time.now(), "/base_link", "/map")
