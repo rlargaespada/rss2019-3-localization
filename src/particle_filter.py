@@ -72,7 +72,7 @@ class ParticleFilter:
         #Initialize drive model
         self.steer_pub = rospy.Publisher(self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
         self.drive_msg = AckermannDriveStamped()
-        self.create_ackermann()
+        # self.create_ackermann()
 
         #Initialize variables for path
         self.path = Path()
@@ -140,11 +140,11 @@ class ParticleFilter:
             self.create_PointCloud()
 
             #Draw path
-            self.odom_for_path_pub.publish(odometry.pose.pose)
-            self.publish_current_pose()
+            # self.odom_for_path_pub.publish(odometry.pose.pose)
+            # self.publish_current_pose()
             # publish ackermann message
 
-            self.steer_pub.publish(self.drive_msg)
+            # self.steer_pub.publish(self.drive_msg)
             self.in_motion = False
 
     def scan_callback(self, scan):
@@ -304,7 +304,7 @@ class ParticleFilter:
         current_point = Point32()
         current_point.x = current_pose.points[0].x
         current_point.y = current_pose.points[0].y
-        current_point.z = np.arctan2(current_pose.points[1].y, current_pose.points[1].x)
+        current_point.z = np.arctan2(current_pose.points[1].y - current_pose.points[0].y, current_pose.points[1].x - current_pose.points[0].x)
 
         self.particle_cloud_publisher.publish(cloud)
         self.current_pose_publisher.publish(current_pose)
@@ -319,7 +319,7 @@ class ParticleFilter:
     def create_ackermann(self):
         self.drive_msg.header.stamp = rospy.Time.now()
         self.drive_msg.header.frame_id = "1"
-        self.drive_msg.drive.steering_angle = 0.2
+        self.drive_msg.drive.steering_angle = 0.
         self.drive_msg.drive.steering_angle_velocity = 0
         self.drive_msg.drive.speed = 1.
         self.drive_msg.drive.acceleration = 0
